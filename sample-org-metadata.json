@@ -1,0 +1,19 @@
+{
+  "orgName": "PROD-BR",
+  "isMultiCurrency": true,
+  "hasPersonAccount": false,
+  "customObjectCount": 2847,
+  "customFieldCount": 41230,
+  "apexClassCount": 3120,
+  "userRoleCount": 14312,
+  "territoryModelCount": 2,
+  "sharingRuleCount": 612,
+  "shieldEnabled": true,
+  "dataCloudEnabled": true,
+  "agentforceEnabled": false,
+  "eventMonitoringEnabled": true,
+  "fatEnabled": true,
+  "package2Count": 8,
+  "modifyAllPermSets": 4,
+  "modifyAllUserCount": 12
+}

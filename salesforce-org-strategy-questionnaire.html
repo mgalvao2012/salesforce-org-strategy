@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Salesforce Multi-Org Strategy — Decisão Arquitetural</title>
+<style>
+  :root {
+    --bg: #f4f6fa;
+    --card: #ffffff;
+    --ink: #16325c;
+    --ink-soft: #54698d;
+    --line: #dddbda;
+    --brand: #0176d3;
+    --brand-soft: #eaf4fc;
+    --multi: #c23934;
+    --multi-soft: #fdeceb;
+    --single: #04844b;
+    --single-soft: #e6f6ee;
+    --warn: #b8590d;
+    --warn-soft: #fef4e4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5; }
+  .container { max-width: 920px; margin: 0 auto; padding: 32px 20px 64px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--ink-soft); font-size: 15px; }
+  .progress-wrap { position: sticky; top: 0; background: var(--bg); padding: 12px 0 16px; z-index: 10; }
+  .progress-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--brand); width: 0%; transition: width 0.3s ease; }
+  .progress-label { font-size: 12px; color: var(--ink-soft); margin-top: 6px; text-align: right; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 24px 24px 20px;
+    margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .section-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand);
+    font-weight: 600; margin: 0 0 4px; }
+  .section-sub { font-size: 13px; color: var(--ink-soft); margin: 0 0 20px; }
+  .q { padding: 18px 0; border-top: 1px solid var(--line); }
+  .q:first-of-type { border-top: none; padding-top: 0; }
+  .q-text { font-weight: 600; font-size: 15px; margin: 0 0 12px; }
+  .q-hint { font-size: 13px; color: var(--ink-soft); font-weight: 400; margin-top: 4px; }
+  .options { display: flex; flex-direction: column; gap: 8px; }
+  .opt { display: flex; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line);
+    border-radius: 8px; cursor: pointer; transition: background 0.15s, border-color 0.15s; font-size: 14px; }
+  .opt:hover { background: var(--brand-soft); border-color: var(--brand); }
+  .opt input { margin: 3px 12px 0 0; flex-shrink: 0; accent-color: var(--brand); }
+  .opt.selected { background: var(--brand-soft); border-color: var(--brand); }
+  .opt-label { flex: 1; }
+  .actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; }
+  button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 12px 22px;
+    border-radius: 6px; border: 1px solid transparent; cursor: pointer; transition: all 0.15s; }
+  .btn-primary { background: var(--brand); color: white; }
+  .btn-primary:hover:not(:disabled) { background: #014486; }
+  .btn-primary:disabled { background: #a8b6ce; cursor: not-allowed; }
+  .btn-secondary { background: white; color: var(--ink); border-color: var(--line); }
+  .btn-secondary:hover { border-color: var(--brand); color: var(--brand); }
+  .result { display: none; }
+  .result.visible { display: block; margin-top: 32px; padding-bottom: 32px; }
+  .result-hero { padding: 32px; border-radius: 10px; margin-bottom: 24px; border: 2px solid; }
+  .result-hero.single { background: var(--single-soft); border-color: var(--single); }
+  .result-hero.multi-hub { background: var(--multi-soft); border-color: var(--multi); }
+  .result-hero.multi-fed { background: var(--multi-soft); border-color: var(--multi); }
+  .result-hero.borderline { background: var(--warn-soft); border-color: var(--warn); }
+  .result-eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; opacity: 0.75; }
+  .result-title { font-size: 26px; font-weight: 700; margin: 4px 0 12px; letter-spacing: -0.01em; }
+  .result-summary { font-size: 15px; margin: 0; }
+  .result-single .result-eyebrow, .result-single .result-title { color: var(--single); }
+  .result-multi .result-eyebrow, .result-multi .result-title { color: var(--multi); }
+  .result-borderline .result-eyebrow, .result-borderline .result-title { color: var(--warn); }
+  .score-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; margin: 20px 0 8px;
+    background: var(--line); }
+  .score-single { background: var(--single); }
+  .score-multi { background: var(--multi); }
+  .score-legend { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); }
+  .score-explainer { margin-top: 12px; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px;
+    background: rgba(255,255,255,0.6); }
+  .score-explainer summary { padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    letter-spacing: 0.02em; color: var(--ink); list-style: none; }
+  .score-explainer summary::-webkit-details-marker { display: none; }
+  .score-explainer summary::before { content: '▸'; font-size: 10px; margin-right: 6px;
+    display: inline-block; transition: transform 0.15s; }
+  .score-explainer[open] summary::before { transform: rotate(90deg); }
+  .score-explainer-body { padding: 4px 14px 12px; font-size: 12px; line-height: 1.55; color: var(--ink); }
+  .score-explainer-body p { margin: 6px 0; }
+  .score-explainer-body ul, .score-explainer-body ol { padding-left: 20px; margin: 6px 0; }
+  .score-explainer-body code { background: rgba(255,255,255,0.7); padding: 1px 5px; border-radius: 3px;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 11px; }
+  .justif-block { margin-top: 20px; }
+  .justif-block h3 { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft);
+    margin: 0 0 10px; font-weight: 600; }
+  .justif-list { list-style: none; padding: 0; margin: 0; }
+  .justif-list li { padding: 10px 12px; border-left: 3px solid var(--brand); background: #f8f9fb;
+    margin-bottom: 6px; font-size: 14px; border-radius: 0 4px 4px 0; }
+  .justif-list li.multi { border-left-color: var(--multi); }
+  .justif-list li.single { border-left-color: var(--single); }
+  .justif-list li.warn { border-left-color: var(--warn); }
+  .justif-list li strong { display: block; margin-bottom: 2px; font-size: 13px; color: var(--ink-soft); }
+  .override-banner { padding: 14px 16px; background: #fff; border: 2px solid var(--multi);
+    border-radius: 8px; margin-bottom: 16px; }
+  .override-banner strong { color: var(--multi); }
+  .subq-section { display: none; }
+  .subq-section.visible { display: block; }
+  .footer-note { font-size: 12px; color: var(--ink-soft); margin-top: 24px; text-align: center; }
+  .metadata-card { border: 1px dashed var(--brand); background: #f8fbfe; }
+  .metadata-card summary { cursor: pointer; font-weight: 600; color: var(--brand); font-size: 14px;
+    list-style: none; display: flex; align-items: center; gap: 8px; }
+  .metadata-card summary::-webkit-details-marker { display: none; }
+  .metadata-card summary::before { content: '▸'; font-size: 12px; transition: transform 0.15s; }
+  .metadata-card[open] summary::before { transform: rotate(90deg); }
+  .metadata-body { margin-top: 14px; font-size: 13px; color: var(--ink-soft); }
+  .metadata-body p { margin: 0 0 10px; }
+  .metadata-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .metadata-actions label.file-btn { background: var(--brand); color: white; padding: 8px 14px;
+    border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+  .metadata-actions label.file-btn:hover { background: #014486; }
+  .metadata-actions input[type="file"] { display: none; }
+  .metadata-loaded { padding: 10px 12px; background: #eaf4fc; border-left: 3px solid var(--brand);
+    border-radius: 4px; font-size: 13px; margin-top: 12px; display: none; }
+  .metadata-loaded.visible { display: block; }
+  .metadata-loaded strong { color: var(--brand); display: block; margin-bottom: 4px; }
+  .metadata-loaded ul { margin: 6px 0 0; padding-left: 18px; }
+  .privacy-notice { font-size: 11px; color: var(--ink-soft); margin-top: 10px; font-style: italic; }
+  .instructions { margin: 14px 0 4px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+  .instructions summary { padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--ink);
+    cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+  .instructions summary::-webkit-details-marker { display: none; }
+  .instructions summary::before { content: '▸'; font-size: 11px; color: var(--brand); transition: transform 0.15s; }
+  .instructions[open] summary::before { transform: rotate(90deg); }
+  .instructions-body { padding: 4px 16px 14px; font-size: 13px; color: var(--ink); }
+  .instructions-body ol { padding-left: 22px; margin: 8px 0; }
+  .instructions-body ol li { margin: 8px 0; }
+  .instructions-body code { background: #f4f6fa; padding: 1px 6px; border-radius: 3px;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12px; color: #16325c; }
+  .instructions-body pre { background: #16325c; color: #eaf4fc; padding: 12px 14px; border-radius: 6px;
+    font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 12px; overflow-x: auto;
+    margin: 8px 0; line-height: 1.5; position: relative; }
+  .instructions-body pre .comment { color: #7a97c9; }
+  .copy-btn { position: absolute; top: 8px; right: 8px; background: rgba(255,255,255,0.1); color: #eaf4fc;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 3px 8px; font-size: 10px;
+    font-weight: 600; cursor: pointer; letter-spacing: 0.05em; text-transform: uppercase; }
+  .copy-btn:hover { background: rgba(255,255,255,0.2); }
+  .copy-btn.copied { background: var(--single); border-color: var(--single); color: white; }
+  .instructions-body .req { font-size: 12px; color: var(--ink-soft); margin: 4px 0 10px; }
+  .instructions-body .warn-tip { background: var(--warn-soft); border-left: 3px solid var(--warn);
+    padding: 8px 10px; margin: 10px 0; font-size: 12px; border-radius: 0 4px 4px 0; }
+  .path-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 10px; }
+  @media (max-width: 720px) { .path-grid { grid-template-columns: 1fr; } }
+  .path-card { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: #fafbfd; }
+  .path-card.path-a { border-color: var(--single); background: var(--single-soft); }
+  .path-card.path-b { border-color: var(--brand); background: var(--brand-soft); }
+  .path-tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 10px; background: white; margin-bottom: 6px; }
+  .path-card.path-a .path-tag { color: var(--single); border: 1px solid var(--single); }
+  .path-card.path-b .path-tag { color: var(--brand); border: 1px solid var(--brand); }
+  .path-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: var(--ink); }
+  .path-desc { font-size: 12px; color: var(--ink); margin-bottom: 6px; line-height: 1.45; }
+  .path-req { font-size: 11px; color: var(--ink-soft); font-style: italic; }
+  .metadata-note { font-size: 12px; color: var(--ink-soft); background: #f4f6fa; padding: 8px 10px;
+    border-radius: 6px; margin: 6px 0 12px; }
+  .path-table, .schema-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0; }
+  .path-table th, .path-table td, .schema-table th, .schema-table td { border: 1px solid var(--line);
+    padding: 6px 8px; text-align: left; vertical-align: top; }
+  .path-table th, .schema-table th { background: #f4f6fa; font-weight: 600; color: var(--ink); }
+  .path-table td code, .schema-table td code { display: inline-block; margin: 1px 3px 1px 0; font-size: 11px; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 10px; letter-spacing: 0.03em; text-transform: uppercase; margin-left: 8px;
+    vertical-align: middle; }
+  .badge-auto { background: #e6f6ee; color: var(--single); border: 1px solid var(--single); }
+  .badge-override { background: #fef4e4; color: var(--warn); border: 1px solid var(--warn); }
+  .badge-manual { background: #f4f6fa; color: var(--ink-soft); border: 1px solid var(--line); }
+  .evidence { font-size: 12px; color: var(--ink-soft); margin-top: 6px; padding: 8px 10px;
+    background: #f8fbfe; border-left: 2px solid var(--brand); border-radius: 0 4px 4px 0; }
+  .evidence strong { color: var(--ink); }
+  .mode-tabs { display: flex; gap: 4px; background: #eaf1f8; padding: 4px; border-radius: 8px;
+    margin-top: 16px; }
+  .mode-tab { flex: 1; padding: 10px 14px; font-size: 13px; font-weight: 600; text-align: center;
+    border: none; background: transparent; color: var(--ink-soft); border-radius: 6px; cursor: pointer;
+    font-family: inherit; transition: all 0.15s; }
+  .mode-tab.active { background: white; color: var(--brand); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .mode-tab:not(.active):hover { color: var(--ink); }
+  .mode-tab-desc { font-size: 12px; font-weight: 400; opacity: 0.75; margin-top: 2px; }
+  .mode-panel { display: none; }
+  .mode-panel.active { display: block; }
+  .process-section-header { padding: 14px 0 6px; border-top: 2px solid var(--brand); margin-top: 8px; }
+.process-section-title { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--brand); font-weight: 700; }
+.process-section-desc { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+.process-field { padding: 14px 0; border-top: 1px solid var(--line); }
+  .process-field:first-child { border-top: none; padding-top: 0; }
+  .process-field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .process-field .hint { font-size: 12px; color: var(--ink-soft); font-weight: 400; margin-bottom: 8px; }
+  .process-field input[type="text"], .process-field select, .process-field textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px;
+    font-family: inherit; font-size: 14px; color: var(--ink); background: white; }
+  .process-field input[type="text"]:focus, .process-field select:focus, .process-field textarea:focus {
+    outline: none; border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+  .process-field .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+  .process-field .check-opt { display: flex; align-items: center; padding: 8px 12px; border: 1px solid var(--line);
+    border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .process-field .check-opt:hover { border-color: var(--brand); }
+  .process-field .check-opt input { margin-right: 8px; accent-color: var(--brand); }
+  .process-field .check-opt.selected { background: var(--brand-soft); border-color: var(--brand); }
+  .org-card { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px;
+    background: white; overflow: hidden; }
+  .org-card.pass { border-left: 4px solid var(--single); }
+  .org-card.warn { border-left: 4px solid var(--warn); }
+  .org-card.fail { border-left: 4px solid var(--multi); opacity: 0.75; }
+  .org-card-summary { padding: 14px 16px; cursor: pointer; list-style: none; }
+  .org-card-summary::-webkit-details-marker { display: none; }
+  .org-card-summary::before { content: '▸'; font-size: 11px; color: var(--ink-soft); margin-right: 8px;
+    display: inline-block; transition: transform 0.15s; vertical-align: middle; }
+  .org-card[open] .org-card-summary::before { transform: rotate(90deg); }
+  .org-card-summary:hover { background: #f8fbfe; }
+  .org-card-body { padding: 0 16px 14px; }
+  .org-card-head { display: inline-flex; justify-content: space-between; align-items: center;
+    width: calc(100% - 20px); vertical-align: middle; }
+  .org-card-head h4 { margin: 0; font-size: 15px; color: var(--ink); font-weight: 600; }
+  .org-rank { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 10px; }
+  .org-rank.pass { color: var(--single); }
+  .org-rank.warn { color: var(--warn); }
+  .org-rank.fail { color: var(--multi); }
+  .org-card-counts { display: inline-flex; gap: 6px; }
+  .org-card-counts .cnt { font-size: 10px; padding: 2px 7px; border-radius: 10px; letter-spacing: 0.02em;
+    font-weight: 600; border: 1px solid; }
+  .org-card-counts .cnt.pass { color: var(--single); border-color: var(--single); background: var(--single-soft); }
+  .org-card-counts .cnt.warn { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+  .org-card-counts .cnt.fail { color: var(--multi); border-color: var(--multi); background: var(--multi-soft); }
+  .org-score { padding: 3px 8px; background: #f4f6fa; border-radius: 4px; color: var(--ink); font-weight: 700;
+    letter-spacing: 0.02em; }
+  .filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .filter-chip { font-size: 11px; padding: 3px 8px; border-radius: 10px; font-weight: 600;
+    letter-spacing: 0.02em; border: 1px solid; }
+  .filter-chip.pass { color: var(--single); border-color: var(--single); background: var(--single-soft); }
+  .filter-chip.warn { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+  .filter-chip.fail { color: var(--multi); border-color: var(--multi); background: var(--multi-soft); }
+  .org-detail { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+  .org-detail li { margin: 2px 0; }
+  .alt-card { padding: 12px 14px; background: #f8fbfe; border-left: 3px solid var(--brand);
+    border-radius: 0 6px 6px 0; margin-bottom: 8px; }
+  .alt-card strong { color: var(--brand); font-size: 13px; display: block; margin-bottom: 4px; }
+  .alt-card p { margin: 0; font-size: 13px; }
+  .eco-block { padding: 12px 14px; border-radius: 6px; margin: 10px 0; border-left: 3px solid;
+    font-size: 13px; line-height: 1.5; }
+  .eco-block strong { display: block; margin-bottom: 6px; font-size: 13px; }
+  .eco-block ul { margin: 4px 0; padding-left: 20px; }
+  .eco-block li { margin: 4px 0; }
+  .eco-neworg { background: var(--multi-soft); border-left-color: var(--multi); }
+  .eco-neworg strong { color: var(--multi); }
+  .eco-consolid { background: var(--brand-soft); border-left-color: var(--brand); }
+  .eco-consolid strong { color: var(--brand); }
+  .eco-rebalance { background: var(--warn-soft); border-left-color: var(--warn); }
+  .eco-rebalance strong { color: var(--warn); }
+  .sunset-block { padding: 14px 16px; background: var(--warn-soft); border: 1px solid var(--warn);
+    border-radius: 8px; margin-top: 12px; }
+  .sunset-block h4 { margin: 0 0 8px; color: var(--warn); font-size: 14px; }
+  .sunset-block ol { margin: 0; padding-left: 20px; font-size: 13px; }
+  .sunset-block li { margin: 3px 0; }
+  @media (max-width: 640px) {
+    .container { padding: 20px 14px 48px; }
+    .card { padding: 18px 16px; }
+    h1 { font-size: 22px; }
+    .result-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Salesforce Multi-Org Strategy</h1>
+    <p>Ferramenta de apoio à decisão arquitetural para landscapes com múltiplas orgs — de 2 a dezenas.</p>
+    <div class="mode-tabs" role="tablist">
+      <button type="button" class="mode-tab active" data-mode="topology" role="tab">
+        Modo Topologia
+        <div class="mode-tab-desc">Single vs Multi (Hub / Federated) — decisão greenfield</div>
+      </button>
+      <button type="button" class="mode-tab" data-mode="allocation" role="tab">
+        Modo Alocação
+        <div class="mode-tab-desc">Landscape existente: onde alocar novo processo</div>
+      </button>
+    </div>
+  </header>
+
+  <details class="card metadata-card" id="metadataCard">
+    <summary>Tem acesso à(s) org(s)? Carregue metadata para pré-preencher perguntas (opcional)</summary>
+    <div class="metadata-body">
+      <p>Cada org é descrita por <strong>um único arquivo JSON</strong> carregado abaixo. O motor tem 45 filtros e cada um lê campos específicos desse JSON. Você monta esse arquivo por <strong>um destes dois caminhos, mutuamente exclusivos</strong>:</p>
+
+      <div class="path-grid">
+        <div class="path-card path-a">
+          <div class="path-tag">Caminho A</div>
+          <div class="path-title">Semi-automático (recomendado)</div>
+          <div class="path-desc">Você tem acesso à org via <code>sf</code> CLI. Um script preenche os campos técnicos (~50 campos); um segundo arquivo humano complementa o que só a área conhece (~40 campos).</div>
+          <div class="path-req">Pré-requisitos: <code>sf</code> CLI + <code>jq</code>, acesso ao script <code>extract-org-metadata.sh</code>.</div>
+        </div>
+        <div class="path-card path-b">
+          <div class="path-tag">Caminho B</div>
+          <div class="path-title">100% manual</div>
+          <div class="path-desc">Você não tem acesso à org (ou não quer usar <code>sf</code> CLI). Monta o JSON inteiro à mão a partir do que a área/PMO/ARB conhecem.</div>
+          <div class="path-req">Pré-requisitos: nenhum. Editor de texto + o schema abaixo.</div>
+        </div>
+      </div>
+
+      <p class="metadata-note"><strong>Não é obrigatório carregar nada.</strong> O questionário no <em>modo Topologia</em> funciona 100% sem JSON. Só o <em>modo Alocação</em> exige.</p>
+
+      <details class="instructions">
+        <summary>Caminho A — Semi-automático (sf CLI + complemento humano)</summary>
+        <div class="instructions-body">
+          <p>O JSON final é a fusão de duas fontes:</p>
+          <table class="path-table">
+            <thead><tr><th>Fonte</th><th>O que preenche</th><th>Como gera</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><code>MinhaOrg.json</code> <em>(output do script)</em></td>
+                <td>Métricas técnicas: metadata counts, limits, PermissionSetLicense, sandboxes, installed packages, platform events, connected apps (~50 campos).</td>
+                <td><code>./extract-org-metadata.sh MinhaOrg MinhaOrg.json</code></td>
+              </tr>
+              <tr>
+                <td><code>MinhaOrg.manual.json</code> <em>(complemento humano)</em></td>
+                <td>O que <strong>não</strong> sai da CLI: regulator, LGPD data controller, LOB, ApexGuru, MDM, backup/DR, team, contratos, custo, retenção (~40 campos).</td>
+                <td>Copiar <code>org-metadata.manual.template.json</code>, renomear e editar.</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>O script <strong>funde os dois automaticamente</strong> ao final: <code>MinhaOrg.manual.json</code> tem prioridade e sobrescreve qualquer campo do script. Você só precisa carregar <strong>o <code>.json</code> final</strong> aqui, não o <code>.manual.json</code>.</p>
+
+          <p class="req"><strong>Instalação dos pré-requisitos:</strong></p>
+          <pre><button class="copy-btn" data-copy="brew install salesforce-cli jq">Copiar</button><code>brew install salesforce-cli jq</code></pre>
+
+          <p class="req"><strong>Passo-a-passo:</strong></p>
+          <ol>
+            <li>
+              <strong>Autenticar</strong> (para sandbox: adicione <code>-r https://test.salesforce.com</code>).
+              <pre><button class="copy-btn" data-copy="sf org login web -a MinhaOrg">Copiar</button><code>sf org login web -a MinhaOrg</code></pre>
+            </li>
+            <li>
+              <strong>Confirmar que está apontando pra org certa</strong> antes de extrair.
+              <pre><button class="copy-btn" data-copy="sf org display -o MinhaOrg">Copiar</button><code>sf org display -o MinhaOrg</code></pre>
+            </li>
+            <li>
+              <strong>Preparar o complemento humano</strong> — copie o template e edite. Deixe vazios os campos que não conhecer; eles caem em WARN, não FAIL.
+              <pre><button class="copy-btn" data-copy="cp org-metadata.manual.template.json MinhaOrg.manual.json">Copiar</button><code>cp org-metadata.manual.template.json MinhaOrg.manual.json</code></pre>
+            </li>
+            <li>
+              <strong>Rodar o script</strong> — extrai da org e funde com <code>MinhaOrg.manual.json</code> se existir. Leva 1-5min.
+              <pre><button class="copy-btn" data-copy="chmod +x extract-org-metadata.sh
+./extract-org-metadata.sh MinhaOrg MinhaOrg.json">Copiar</button><code>chmod +x extract-org-metadata.sh
+./extract-org-metadata.sh MinhaOrg MinhaOrg.json</code></pre>
+            </li>
+            <li>
+              <strong>Multi-org:</strong> repita 1-4 para cada org; carregue todos os <code>.json</code> finais abaixo.
+            </li>
+            <li>
+              <strong>Carregar</strong> o <code>MinhaOrg.json</code> em "Selecionar JSON(s) de org" no final desta seção.
+            </li>
+          </ol>
+
+          <div class="warn-tip">
+            <strong>Sem <code>MinhaOrg.manual.json</code>:</strong> o script roda mesmo assim, mas os filtros do modo Alocação que dependem de dados humanos (regulator, LGPD, ApexGuru, backup, team, MDM, contratos) ficam em WARN. Um aviso explícito é impresso ao final. É legítimo rodar assim para preview técnico, mas para decisão final o complemento humano é o que dá poder ao motor.
+          </div>
+
+          <div class="warn-tip">
+            <strong>Se o script falhar:</strong> <code>bash -x ./extract-org-metadata.sh MinhaOrg MinhaOrg.json 2&gt;&amp;1 | tail -40</code>. Causas comuns: usuário sem Tooling API, org sem Package2, sandbox onde <code>SandboxInfo</code> não é consultável.
+          </div>
+        </div>
+      </details>
+
+      <details class="instructions">
+        <summary>Caminho B — 100% manual (sem sf CLI)</summary>
+        <div class="instructions-body">
+          <p>Sem acesso à CLI, você monta <strong>um arquivo <code>.json</code> por org</strong> com os dados que a área/PMO/ARB conhecem. Não use o script nem o template do complemento; use o <em>schema unificado</em> abaixo como base.</p>
+
+          <p class="req"><strong>Passo-a-passo:</strong></p>
+          <ol>
+            <li>Copie o <strong>exemplo mínimo</strong> abaixo e salve como <code>MinhaOrg.json</code>.</li>
+            <li>Ajuste os valores. Consulte a tabela <em>Schema completo por bloco</em> abaixo para adicionar mais campos.</li>
+            <li>Carregue o arquivo em "Selecionar JSON(s) de org".</li>
+          </ol>
+
+          <p class="req"><strong>Exemplo mínimo funcional</strong> — funciona para o modo Alocação, mas gera muitos WARN por causa dos campos não declarados. Todos os campos abaixo são <em>obrigatórios apenas se você quer PASS</em> nos filtros que os consomem.</p>
+          <pre><button class="copy-btn" data-copy-target="manualJsonMin">Copiar</button><code id="manualJsonMin">{
+  "orgName": "MinhaOrg",
+  "edition": "Enterprise",
+  "regulator": "NONE",
+  "dataControllerLGPD": "Minha Empresa S.A.",
+  "lobOwner": "B2C / Vendas Diretas",
+  "orgType": "production",
+  "hasPersonAccount": false,
+  "isMultiCurrency": false,
+  "storagePct": 40,
+  "apiUsagePct": 25,
+  "customObjectLimitPct": 15,
+  "releaseSchedule": "biweekly",
+  "shieldEnabled": false,
+  "fatEnabled": false,
+  "supportTier": "premier"
+}</code></pre>
+
+          <div class="warn-tip">
+            <strong>Regra de ouro:</strong> cada campo omitido vira WARN no filtro que o consome, nunca PASS silencioso. Se estiver em dúvida se sabe o valor, deixe o campo fora — a diagnose fica correta.
+          </div>
+        </div>
+      </details>
+
+      <details class="instructions">
+        <summary>Schema completo — todos os campos que o motor consome, agrupados por bloco</summary>
+        <div class="instructions-body">
+          <p>Referência única, usada nos <strong>dois caminhos</strong>. Cada bloco corresponde a uma seção do formulário do processo e alimenta um grupo de filtros. Em <em>Caminho A</em>, "coleta técnica" = script; "complemento humano" = <code>.manual.json</code>. Em <em>Caminho B</em>, tudo é escrito à mão no mesmo arquivo.</p>
+
+          <table class="schema-table">
+            <thead><tr><th style="width:26%">Bloco</th><th style="width:37%">Coleta técnica (script)</th><th style="width:37%">Complemento humano</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Identificação</td>
+                <td><code>orgName</code>, <code>edition</code>, <code>podRegion</code>, <code>timezone</code>, <code>locale</code>, <code>activeLanguages</code></td>
+                <td><code>lobOwner</code>, <code>orgType</code></td>
+              </tr>
+              <tr>
+                <td>Regulatório / LGPD</td>
+                <td>—</td>
+                <td><code>regulator</code>, <code>dataControllerLGPD</code>, <code>pciInScope</code>, <code>soxScope</code>, <code>consentFramework</code></td>
+              </tr>
+              <tr>
+                <td>Data model / MDM</td>
+                <td><code>hasPersonAccount</code>, <code>isMultiCurrency</code>, <code>sharingModel</code>, <code>roleHierarchyDepth</code></td>
+                <td><code>dataModel</code>, <code>sharedCustomerBases</code>, <code>masterDataOwnerFor</code>, <code>masterDataConsumerOf</code></td>
+              </tr>
+              <tr>
+                <td>Capacidade / metadata</td>
+                <td><code>customObjectCount</code>, <code>customFieldCount</code>, <code>apexClassCount</code>, <code>userRoleCount</code>, <code>territoryModelCount</code>, <code>sharingRuleCount</code>, <code>triggerCount</code>, <code>flowCount</code>, <code>permSetCount</code>, <code>storagePct</code>, <code>apiUsagePct</code>, <code>customObjectLimitPct</code></td>
+                <td><code>storageGrowthPctPerMonth</code></td>
+              </tr>
+              <tr>
+                <td>Concorrência</td>
+                <td><code>concurrentApiUsagePct</code>, <code>concurrentApiLimit</code>, <code>streamingClientsPct</code>, <code>bulkJobsDailyPct</code>, <code>concurrentLongRunningPct</code>, <code>futureQueuePendingPct</code></td>
+                <td><code>queueableDepthUsed</code></td>
+              </tr>
+              <tr>
+                <td>Features / add-ons</td>
+                <td><code>shieldEnabled</code>, <code>dataCloudEnabled</code>, <code>agentforceEnabled</code>, <code>eventMonitoringEnabled</code>, <code>fatEnabled</code>, <code>experienceCloudEnabled</code>, <code>availableLicenses</code>, <code>connectedTenants</code></td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>Segurança / admin</td>
+                <td><code>modifyAllPermSets</code>, <code>modifyAllUserCount</code></td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>Release / DevOps</td>
+                <td>—</td>
+                <td><code>releaseSchedule</code>, <code>releaseLeadTimeDays</code>, <code>envStrategy</code>, <code>sandboxRefreshCoordinated</code>, <code>dataMaskEnabled</code></td>
+              </tr>
+              <tr>
+                <td>Sandboxes</td>
+                <td><code>fullCopySandboxes</code>, <code>partialCopySandboxes</code>, <code>developerSandboxes</code>, <code>lastSandboxRefresh</code></td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>Platform Events / CDC</td>
+                <td><code>platformEventUsagePct</code>, <code>platformEventDailyLimit</code>, <code>hvpeEnabled</code>, <code>platformEventPublishedTypes</code>, <code>cdcEnabledEntities</code></td>
+                <td><code>publishedContracts</code>, <code>consumedContracts</code>, <code>pubSubApiEnabled</code></td>
+              </tr>
+              <tr>
+                <td>Integrações externas</td>
+                <td>—</td>
+                <td><code>externalFeeds</code>, <code>vendorContractsExpiring</code>, <code>interOrgLatencyMsP95</code></td>
+              </tr>
+              <tr>
+                <td>Packages</td>
+                <td><code>installedPackages[].namespace</code>, <code>installedPackages[].name</code>, <code>installedPackages[].version</code>, <code>installedPackageCount</code>, <code>package2Count</code></td>
+                <td><code>installedPackages[].licenseType</code>, <code>installedPackages[].allowsExtension</code></td>
+              </tr>
+              <tr>
+                <td>ApexGuru</td>
+                <td>—</td>
+                <td><code>apexGuruCriticalIssues</code>, <code>apexGuruSoqlNonSelective</code>, <code>apexGuruLongRunningApex</code>, <code>apexGuruGovernorExceptions</code>, <code>apexGuruTrend</code>, <code>apexGuruLastRun</code>, <code>apexGuruTopOffenders</code></td>
+              </tr>
+              <tr>
+                <td>Backup / DR</td>
+                <td>—</td>
+                <td><code>backupProvider</code>, <code>backupFrequency</code>, <code>rtoHours</code>, <code>rpoHours</code></td>
+              </tr>
+              <tr>
+                <td>Team / capacity</td>
+                <td>—</td>
+                <td><code>teamHeadcount</code>, <code>teamUtilizationPct</code>, <code>teamSkills</code></td>
+              </tr>
+              <tr>
+                <td>Support / operações</td>
+                <td>—</td>
+                <td><code>supportTier</code>, <code>incidentsLast12mo</code>, <code>uptimePct</code>, <code>documentationScore</code></td>
+              </tr>
+              <tr>
+                <td>UX overhead</td>
+                <td>—</td>
+                <td><code>tabCount</code>, <code>layoutCount</code>, <code>recordTypeCount</code></td>
+              </tr>
+              <tr>
+                <td>FinOps / custo</td>
+                <td>—</td>
+                <td><code>finopsObservability</code>, <code>costPerUserMonthly</code>, <code>addonRunCostMonthly</code></td>
+              </tr>
+              <tr>
+                <td>Retenção</td>
+                <td>—</td>
+                <td><code>fieldHistoryRetentionMonths</code>, <code>bigObjectsEnabled</code></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="req"><strong>Valores válidos para enums e campos textuais:</strong></p>
+          <ul style="padding-left:22px;font-size:13px;">
+            <li><code>regulator</code>: <code>NONE</code>, <code>LGPD</code>, <code>BACEN</code>, <code>CVM</code>, <code>SUSEP</code>, <code>PREVIC</code>, <code>ANS</code>, <code>ANEEL</code>, <code>ANATEL</code>, <code>GDPR</code>, <code>CCPA</code>, <code>HIPAA</code>, <code>OTHER</code></li>
+            <li><code>orgType</code>: <code>production</code>, <code>sandbox</code></li>
+            <li><code>dataModel</code>: <code>b2b</code>, <code>personAccount</code>, <code>fsc</code>, <code>healthcloud</code>, <code>nonprofit</code>, <code>education</code>, <code>manufacturing</code>, <code>custom</code></li>
+            <li><code>releaseSchedule</code>: <code>weekly</code>, <code>biweekly</code>, <code>monthly</code>, <code>quarterly</code></li>
+            <li><code>envStrategy</code>: <code>canary</code>, <code>staged</code>, <code>prod-only</code>, <code>bigbang</code></li>
+            <li><code>apexGuruTrend</code>: <code>improving</code>, <code>stable</code>, <code>stable-on-debt</code>, <code>degrading</code></li>
+            <li><code>supportTier</code>: <code>standard</code>, <code>premier</code>, <code>signature</code></li>
+            <li><code>sharingModel</code>: <code>private</code>, <code>public</code>, <code>controlled</code></li>
+            <li><code>backupFrequency</code>: <code>hourly</code>, <code>daily</code>, <code>weekly</code></li>
+            <li><code>installedPackages[].licenseType</code>: string livre; regra especial: se contiver <code>oem</code> (case-insensitive), o filtro <em>packages</em> vira WARN quando o processo modifica esse namespace.</li>
+            <li><code>installedPackages[].allowsExtension</code>: <code>true</code> ou <code>false</code>. Se <code>false</code>, processo que tenta modificar o package vira FAIL.</li>
+            <li><code>interOrgLatencyMsP95</code>: objeto <code>{"NomeDaOrg": 250}</code> em ms.</li>
+            <li><code>availableLicenses</code>: objeto <code>{"Salesforce": 120, "Platform": 300}</code>.</li>
+            <li><code>platformEventPublishedTypes[]</code>: <code>{"name":"AccountCDC","type":"cdc|standard|high-volume"}</code>.</li>
+          </ul>
+
+          <p class="req"><strong>Exemplos completos</strong> em <code>samples/</code>: <code>OrgVarejoPF.json</code> (B2C regulado — Person Account, HVPE, Pub-Sub), <code>OrgAsset.json</code> (mercado de capitais — B2B, CVM, sem HVPE), <code>OrgCorporativa.json</code> (org de plataforma B2B — capacidade apertada, muitos add-ons). Use como referência ao montar orgs no Caminho B — copie o perfil mais próximo do seu setor e adapte.</p>
+        </div>
+      </details>
+
+      <div class="metadata-actions">
+        <label class="file-btn">
+          Selecionar JSON(s) de org
+          <input type="file" id="metadataFile" accept="application/json,.json" multiple>
+        </label>
+        <button type="button" class="btn-secondary" id="clearMetadataBtn" style="display:none;">Limpar metadata</button>
+      </div>
+      <div class="metadata-loaded" id="metadataLoaded"></div>
+      <p class="privacy-notice">O arquivo é processado apenas no seu navegador. Nada é enviado a nenhum servidor.</p>
+    </div>
+  </details>
+
+  <div id="topologyPanel" class="mode-panel active">
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-bar-fill" id="progressFill"></div></div>
+      <div class="progress-label"><span id="progressLabel">0 / 14 respondidas</span></div>
+    </div>
+
+    <form id="form">
+      <div id="questionsRoot"></div>
+
+      <div id="hubFedSection" class="card subq-section">
+        <p class="section-title">Se multi-org: Hub-and-Spoke ou Federated</p>
+        <p class="section-sub">Estas perguntas só influenciam o resultado se a recomendação principal for multi-org.</p>
+        <div id="hubFedQuestions"></div>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn-secondary" id="resetBtn">Limpar</button>
+        <button type="submit" class="btn-primary" id="submitBtn" disabled>Gerar recomendação</button>
+      </div>
+    </form>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <div id="allocationPanel" class="mode-panel">
+    <div class="card">
+      <p class="section-title">Perfil do novo processo</p>
+      <p class="section-sub">Descreva o processo a ser alocado. Estas informações são cruzadas com o inventário de orgs carregado acima para filtrar candidatas.</p>
+      <form id="processForm"></form>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn-secondary" id="resetProcessBtn">Limpar</button>
+      <button type="button" class="btn-primary" id="runAllocationBtn" disabled>Filtrar orgs candidatas</button>
+    </div>
+
+    <div class="result" id="allocationResult"></div>
+  </div>
+
+  <p class="footer-note">Framework baseado em Salesforce Well-Architected + Six-Factor (T. Leddy) + práticas de CTAs.
+    Ferramenta de apoio à decisão — não substitui review arquitetural formal.</p>
+</div>
+
+<script type="module">
+import { normalizeOrgMetadata, evaluateOrgForProcess, analyzeLandscape } from './allocation-engine.mjs';
+const questions = [
+  {
+    id: 'residency',
+    section: 'Bloqueadores regulatórios e de segurança',
+    sectionSub: 'Respostas nesta seção podem forçar multi-org independentemente das demais.',
+    manualOnly: true,
+    text: 'Existe restrição legal de residência de dados entre jurisdições (LGPD-BR, GDPR-EU, PIPL-CN, sovereignty rules) que impeça consolidação num único tenant?',
+    options: [
+      { label: 'Sim, conflitante — dados não podem trafegar cross-border', override: 'FORCE_MULTI', m: 10, s: 0, reason: 'Residência de dados conflitante entre jurisdições impede consolidação num único tenant.' },
+      { label: 'Existe, mas resolvível com Hyperforce regional + Shield encryption', m: 3, s: 4, reason: 'Restrição parcial de residência resolvível com controles lógicos.' },
+      { label: 'Não há restrição regulatória de residência', m: 0, s: 5, reason: 'Sem barreira de data residency.' }
+    ]
+  },
+  {
+    id: 'admin_segregation',
+    text: 'É obrigatório segregar acesso administrativo entre BUs (concorrentes internas, JVs, holdings com competidores) de forma que System Admin de uma BU não veja metadata da outra?',
+    options: [
+      { label: 'Sim, isolamento administrativo é inegociável', override: 'FORCE_MULTI', m: 10, s: 0, reason: 'Segregação admin absoluta é impossível dentro de uma única org.' },
+      { label: 'Existe sensibilidade, mas permission sets + Modify All Data controlado bastam', m: 3, s: 4, reason: 'Sensibilidade admin resolvível com controle granular de permissões.' },
+      { label: 'Não há requisito de segregação admin', m: 0, s: 4, reason: 'Sem exigência de isolamento admin.' }
+    ]
+  },
+  {
+    id: 'physical_isolation',
+    manualOnly: true,
+    text: 'Regulador exige isolamento físico (não lógico) de dados — SOX segregation of duties strict, HIPAA scope reduction, PCI-DSS descoping?',
+    options: [
+      { label: 'Sim, isolamento físico é obrigatório por regulador', override: 'FORCE_MULTI', m: 9, s: 0, reason: 'Isolamento físico exigido por regulador não é atendido por tenant único.' },
+      { label: 'Compliance existe mas atendida com Shield + FAT + sharing rules', m: 3, s: 4, reason: 'Compliance atendida por controles lógicos in-org.' },
+      { label: 'Não aplicável', m: 0, s: 3, reason: 'Sem exigência de isolamento físico.' }
+    ]
+  },
+
+  {
+    id: 'corporate_structure',
+    section: 'Estrutura de negócio',
+    manualOnly: true,
+    text: 'Estrutura corporativa envolve entidades legais distintas (CNPJs, boards independentes, P&L segregado)?',
+    options: [
+      { label: 'Holding com subsidiárias legalmente distintas ou JVs com sócios externos', m: 7, s: 0, reason: 'Estrutura legal segmentada com governança independente por entidade.' },
+      { label: 'Grupo com filiais/divisões operacionais sob mesma matriz', m: 2, s: 6, reason: 'Filiais operacionais sob governança única.' },
+      { label: 'Empresa única sem subsidiárias', m: 0, s: 8, reason: 'Perímetro corporativo único e estável.' }
+    ]
+  },
+  {
+    id: 'business_model',
+    text: 'BUs têm modelos de negócio compatíveis com o mesmo data model Salesforce (Account/Contact/Opportunity)?',
+    options: [
+      { label: 'B2B e B2C coexistem com Person Account/Multi-Currency conflitantes entre BUs', m: 8, s: 0, reason: 'Features irreversíveis (Person Account, Multi-Currency) conflitam entre BUs.' },
+      { label: 'Linhas de produto com data model divergente mas gerenciável via Record Types', m: 4, s: 3, reason: 'Divergência de modelo resolvível com Record Types e page layouts.' },
+      { label: 'Todas as BUs compartilham Account/Contact/Opportunity naturalmente', m: 0, s: 8, reason: 'Data model unificado entre BUs.' }
+    ]
+  },
+  {
+    id: 'ma_pipeline',
+    manualOnly: true,
+    text: 'Há pipeline ativo de M&A ou probabilidade real de spin-off/divestiture em 3-5 anos?',
+    options: [
+      { label: 'Pipeline ativo e probabilidade real de carve-out em 3-5 anos', m: 6, s: 0, reason: 'M&A ativo + risco de carve-out favorece topologia que suporta separação limpa.' },
+      { label: 'M&A esporádico, absorvível por migração', m: 2, s: 4, reason: 'M&A baixa frequência, absorvível em single-org.' },
+      { label: 'Perímetro estável, sem carve-out previsto', m: 0, s: 5, reason: 'Perímetro estável no médio prazo.' }
+    ]
+  },
+  {
+    id: 'shared_customer',
+    text: 'Mesmo cliente é atendido por múltiplas BUs com necessidade real de visão 360º e cross-sell operacional?',
+    options: [
+      { label: 'Sim, cross-sell operacional é core do negócio', m: 0, s: 9, reason: 'Cross-sell operacional exige 360 nativo — multi-org multiplica complexidade de sync.' },
+      { label: 'Existe overlap, mas resolvível com Data Cloud federando as orgs', m: 3, s: 4, reason: 'Overlap parcial pode ser resolvido com Data Cloud como hub de identidade.' },
+      { label: 'Bases de cliente são disjuntas por natureza', m: 5, s: 0, reason: 'Bases disjuntas — sem penalidade de sync cross-org.' }
+    ]
+  },
+  {
+    id: 'release_autonomy',
+    text: 'BUs têm autonomia de release com roadmaps independentes e cadências diferentes?',
+    options: [
+      { label: 'Roadmaps completamente independentes, releases bloqueiam-se mutuamente', m: 5, s: 0, reason: 'Cadência de release incompatível gera fricção contínua em single-org sem 2GP.' },
+      { label: 'Existe fricção mas resolvível com 2GP + feature branches', m: 2, s: 4, reason: '2GP + trunk-based resolvem isolamento sem custo de licença.' },
+      { label: 'Governance central + release cadence unificada é aceitável', m: 0, s: 6, reason: 'CoE central viável com cadência coordenada.' }
+    ]
+  },
+
+  {
+    id: 'metadata_volume',
+    section: 'Restrições técnicas',
+    text: 'Qual o volume de custom objects ativos e tempo de retrieve completo da org?',
+    options: [
+      { label: '>2.000 custom objects OU retrieve completo >1h', m: 5, s: 0, reason: 'Volume de metadata próximo dos limites de plataforma torna operação em single-org custosa.' },
+      { label: 'Entre 500 e 2.000 custom objects, gerenciável', m: 2, s: 4, reason: 'Volume médio, absorvível com 2GP e archive strategy.' },
+      { label: 'Menos de 500 custom objects', m: 0, s: 5, reason: 'Volume de metadata confortável em single-org.' }
+    ]
+  },
+  {
+    id: 'sharing_complexity',
+    text: 'Complexidade do sharing model (role hierarchy, territory management)?',
+    options: [
+      { label: 'Mais de 10.000 roles OU territórios com sobreposição extrema entre BUs', m: 6, s: 0, reason: 'Sharing model no limite operacional — group membership recalc degrada performance.' },
+      { label: 'Sharing complexo mas resolvível com Restriction Rules + Scoping Rules + Enhanced Sharing', m: 2, s: 4, reason: 'Complexidade endereçável com recursos nativos modernos de sharing.' },
+      { label: 'Sharing model simples ou moderado', m: 0, s: 5, reason: 'Sharing model dentro da zona confortável.' }
+    ]
+  },
+  {
+    id: 'devops_maturity',
+    text: 'Maturidade DevOps do time — capacidade de modularizar com Unlocked Packages (2GP)?',
+    options: [
+      { label: 'Time sem apetite ou maturidade para 2GP no médio prazo', m: 3, s: 0, reason: 'Sem 2GP, isolamento lógico dentro de single-org é frágil.' },
+      { label: '2GP em adoção, maturidade viável em 6-12 meses', m: 1, s: 5, reason: '2GP em rampa — resolve isolamento lógico sem custo de licença.' },
+      { label: '2GP maduro, trunk-based operante, DevOps Center / sfdx-hardis em uso', m: 0, s: 7, reason: 'Maturidade DevOps permite modularização robusta em single-org.' }
+    ]
+  },
+
+  {
+    id: 'user_mobility',
+    section: 'Custo e operação',
+    text: 'Usuários transitam entre BUs — mesmo colaborador precisa operar em múltiplas BUs?',
+    options: [
+      { label: 'Muitos usuários operam cross-BU (duplicaria licenças em multi-org)', m: 0, s: 6, reason: 'Mobilidade de usuários entre BUs multiplica licenças em multi-org.' },
+      { label: 'Alguns usuários cross-BU, gerenciável', m: 2, s: 3, reason: 'Mobilidade parcial, custo de licença moderado.' },
+      { label: 'Bases de usuário são disjuntas por BU', m: 4, s: 0, reason: 'Bases disjuntas — sem duplicação de licença em multi-org.' }
+    ]
+  },
+  {
+    id: 'addon_dependency',
+    text: 'Dependência de add-ons caros e não-pooláveis entre orgs (Shield, Data Cloud, Agentforce, Event Monitoring, FAT)?',
+    options: [
+      { label: 'Alto uso de add-ons — custo se multiplicaria linearmente por N orgs', m: 0, s: 6, reason: 'Add-ons são SKU per-org — multi-org multiplica custo de features caras.' },
+      { label: 'Uso moderado, custo aceitável em multi-org', m: 2, s: 3, reason: 'Uso moderado de add-ons — impacto contido.' },
+      { label: 'Baixa dependência de add-ons pagos', m: 2, s: 2, reason: 'Baixa dependência de add-ons — variável não decisiva.' }
+    ]
+  }
+];
+
+const hubFedQuestions = [
+  {
+    id: 'master_data',
+    text: 'Existe master data centralizado (accounts corporativas, catálogo de produtos, tabela de preços) que deve fluir de uma fonte para as demais BUs?',
+    options: [
+      { label: 'Sim, master unidirecional — uma fonte alimenta as satélites', h: 5, f: 0, reason: 'Master data centralizado com fluxo unidirecional favorece Hub-and-Spoke.' },
+      { label: 'Cada BU é master de sua própria fatia — sem golden record único', h: 0, f: 4, reason: 'Ausência de master único favorece topologia federada.' },
+      { label: 'Ainda não há master data governado', h: 2, f: 2, reason: 'Governança de master data indefinida — priorizar essa decisão antes da topologia.' }
+    ]
+  },
+  {
+    id: 'bidirectional_sync',
+    text: 'Sync bidirecional entre orgs é inescapável (mesmo cliente é atualizado em ambas as pontas)?',
+    options: [
+      { label: 'Sim, sync bidirecional é obrigatório', h: 0, f: 6, reason: 'Sync bidirecional obrigatório é o cenário natural de Federated.' },
+      { label: 'Prefere unidirecional mas com exceções pontuais', h: 3, f: 2, reason: 'Fluxo majoritariamente unidirecional com exceções — Hub com callbacks controlados funciona.' },
+      { label: 'Fluxo estritamente unidirecional (hub → spoke)', h: 5, f: 0, reason: 'Fluxo unidirecional puro é Hub-and-Spoke por definição.' }
+    ]
+  },
+  {
+    id: 'consolidated_reporting',
+    text: 'Reporting executivo consolidado (rollup C-level unificado) é requisito?',
+    options: [
+      { label: 'Sim, dashboard executivo unificado é obrigatório', h: 5, f: 0, reason: 'Rollup executivo unificado exige agregador central — Hub-and-Spoke com CRM Analytics/Data Cloud no hub.' },
+      { label: 'Aceitável reporting descentralizado consolidado externamente (Tableau/PowerBI)', h: 2, f: 3, reason: 'Consolidação fora do CRM permite topologia federada.' },
+      { label: 'Reporting descentralizado é aceitável', h: 0, f: 3, reason: 'Sem exigência de rollup — federated aceitável.' }
+    ]
+  },
+  {
+    id: 'transitional_ma',
+    manualOnly: true,
+    text: 'Este é um cenário transitório de M&A com deadline explícito de consolidação em 12-24 meses?',
+    options: [
+      { label: 'Sim, transitório com deadline claro de consolidação', h: 0, f: 5, reason: 'Cenário transitório de M&A é o único caso em que Federated peer-to-peer é aceitável em greenfield.' },
+      { label: 'Multi-org permanente por natureza do negócio', h: 4, f: 0, reason: 'Topologia permanente favorece Hub-and-Spoke pela governança de dados.' },
+      { label: 'Horizonte indefinido', h: 2, f: 1, reason: 'Horizonte indefinido — atenção: federated sem deadline vira permanente por inércia.' }
+    ]
+  }
+];
+
+const state = { answers: {}, hubFed: {}, metadata: [], inferences: {}, process: {} };
+
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const mode = tab.dataset.mode;
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.getElementById('topologyPanel').classList.toggle('active', mode === 'topology');
+    document.getElementById('allocationPanel').classList.toggle('active', mode === 'allocation');
+  });
+});
+
+const inferenceRules = {
+  business_model: orgs => {
+    if (orgs.length < 2) {
+      const anyPA = orgs.some(o => o.hasPersonAccount);
+      const anyMC = orgs.some(o => o.isMultiCurrency);
+      if (anyPA && anyMC) {
+        return { optionIndex: 1, evidence: `Person Account + Multi-Currency simultâneos — combinação exige BUs bem alinhadas`, sources: orgs.map(o => o.orgName) };
+      }
+      return null;
+    }
+    const paConflict = orgs.some(o => o.hasPersonAccount) && orgs.some(o => !o.hasPersonAccount);
+    const mcConflict = orgs.some(o => o.isMultiCurrency) && orgs.some(o => !o.isMultiCurrency);
+    if (paConflict || mcConflict) {
+      const facts = [];
+      if (paConflict) facts.push('Person Account habilitado em uma org e não em outra (irreversível)');
+      if (mcConflict) facts.push('Multi-Currency habilitado em uma org e não em outra (irreversível)');
+      return { optionIndex: 0, evidence: facts.join(' · '), sources: orgs.map(o => o.orgName) };
+    }
+    return { optionIndex: 2, evidence: 'Configuração de features consistente entre orgs (Person Account / Multi-Currency alinhados)', sources: orgs.map(o => o.orgName) };
+  },
+  metadata_volume: orgs => {
+    const maxObj = Math.max(...orgs.map(o => o.customObjectCount));
+    const totalObj = orgs.reduce((s, o) => s + o.customObjectCount, 0);
+    const rel = orgs.length > 1 ? totalObj : maxObj;
+    if (rel > 2000) return { optionIndex: 0, evidence: `${rel.toLocaleString('pt-BR')} custom objects (limite 3.000 em UE — ${Math.round(rel/3000*100)}%)`, sources: orgs.map(o => `${o.orgName}: ${o.customObjectCount}`) };
+    if (rel >= 500) return { optionIndex: 1, evidence: `${rel.toLocaleString('pt-BR')} custom objects — zona intermediária`, sources: orgs.map(o => `${o.orgName}: ${o.customObjectCount}`) };
+    return { optionIndex: 2, evidence: `${rel.toLocaleString('pt-BR')} custom objects — confortável`, sources: orgs.map(o => `${o.orgName}: ${o.customObjectCount}`) };
+  },
+  sharing_complexity: orgs => {
+    const maxRoles = Math.max(...orgs.map(o => o.userRoleCount));
+    const totalTerr = orgs.reduce((s, o) => s + o.territoryModelCount, 0);
+    if (maxRoles > 10000 || totalTerr > 3) return { optionIndex: 0, evidence: `${maxRoles.toLocaleString('pt-BR')} roles${totalTerr ? ` + ${totalTerr} territory models` : ''}`, sources: orgs.map(o => `${o.orgName}: ${o.userRoleCount} roles`) };
+    if (maxRoles > 1000) return { optionIndex: 1, evidence: `${maxRoles.toLocaleString('pt-BR')} roles — complexo mas gerenciável com Restriction/Scoping Rules`, sources: orgs.map(o => `${o.orgName}: ${o.userRoleCount} roles`) };
+    return { optionIndex: 2, evidence: `${maxRoles.toLocaleString('pt-BR')} roles — sharing model confortável`, sources: orgs.map(o => `${o.orgName}: ${o.userRoleCount} roles`) };
+  },
+  addon_dependency: orgs => {
+    const addons = ['shieldEnabled', 'dataCloudEnabled', 'agentforceEnabled', 'eventMonitoringEnabled', 'fatEnabled'];
+    const labels = { shieldEnabled: 'Shield', dataCloudEnabled: 'Data Cloud', agentforceEnabled: 'Agentforce', eventMonitoringEnabled: 'Event Monitoring', fatEnabled: 'FAT' };
+    const active = addons.filter(a => orgs.some(o => o[a])).map(a => labels[a]);
+    if (active.length >= 3) return { optionIndex: 0, evidence: `${active.length} add-ons pagos ativos: ${active.join(', ')}`, sources: orgs.map(o => o.orgName) };
+    if (active.length >= 1) return { optionIndex: 1, evidence: `Add-ons ativos: ${active.join(', ')}`, sources: orgs.map(o => o.orgName) };
+    return { optionIndex: 2, evidence: 'Nenhum add-on pago detectado', sources: orgs.map(o => o.orgName) };
+  },
+  admin_segregation: orgs => {
+    const maxPS = Math.max(...orgs.map(o => o.modifyAllPermSets));
+    const maxUsers = Math.max(...orgs.map(o => o.modifyAllUserCount));
+    if (maxUsers > 20 || maxPS > 10) return { optionIndex: 1, evidence: `${maxUsers} usuários com Modify All Data em ${maxPS} permission sets — sinal de baixa segregação atual`, sources: orgs.map(o => o.orgName) };
+    return null;
+  },
+  devops_maturity: orgs => {
+    const maxPkg = Math.max(...orgs.map(o => o.package2Count));
+    if (maxPkg > 5) return { optionIndex: 2, evidence: `${maxPkg} Unlocked Packages (2GP) em uso — DevOps maduro`, sources: orgs.map(o => o.orgName) };
+    if (maxPkg >= 1) return { optionIndex: 1, evidence: `${maxPkg} Unlocked Packages — 2GP em adoção`, sources: orgs.map(o => o.orgName) };
+    return { optionIndex: 0, evidence: 'Nenhum Unlocked Package detectado — 2GP não adotado', sources: orgs.map(o => o.orgName) };
+  }
+};
+
+function runInferences() {
+  state.inferences = {};
+  if (state.metadata.length === 0) return;
+  Object.entries(inferenceRules).forEach(([qId, rule]) => {
+    const res = rule(state.metadata);
+    if (res) state.inferences[qId] = res;
+  });
+}
+
+function renderQuestions() {
+  const root = document.getElementById('questionsRoot');
+  let currentSection = null;
+  let sectionCard = null;
+
+  questions.forEach((q, idx) => {
+    if (q.section) {
+      currentSection = q.section;
+      sectionCard = document.createElement('div');
+      sectionCard.className = 'card';
+      const h = document.createElement('p');
+      h.className = 'section-title';
+      h.textContent = q.section;
+      sectionCard.appendChild(h);
+      if (q.sectionSub) {
+        const s = document.createElement('p');
+        s.className = 'section-sub';
+        s.textContent = q.sectionSub;
+        sectionCard.appendChild(s);
+      }
+      root.appendChild(sectionCard);
+    }
+    const qEl = buildQuestion(q, 'answers');
+    sectionCard.appendChild(qEl);
+  });
+
+  const hubFedRoot = document.getElementById('hubFedQuestions');
+  hubFedQuestions.forEach(q => {
+    hubFedRoot.appendChild(buildQuestion(q, 'hubFed'));
+  });
+}
+
+function buildQuestion(q, storeKey) {
+  const wrap = document.createElement('div');
+  wrap.className = 'q';
+  wrap.dataset.qid = q.id;
+  const title = document.createElement('div');
+  title.className = 'q-text';
+  title.textContent = q.text;
+
+  const badgeContainer = document.createElement('span');
+  badgeContainer.className = 'q-badges';
+  title.appendChild(badgeContainer);
+  wrap.appendChild(title);
+
+  const evidenceEl = document.createElement('div');
+  evidenceEl.className = 'evidence';
+  evidenceEl.style.display = 'none';
+  wrap.appendChild(evidenceEl);
+
+  const opts = document.createElement('div');
+  opts.className = 'options';
+  q.options.forEach((opt, i) => {
+    const label = document.createElement('label');
+    label.className = 'opt';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = q.id;
+    input.value = i;
+    input.addEventListener('change', () => {
+      const prev = state[storeKey][q.id];
+      state[storeKey][q.id] = i;
+      const inf = storeKey === 'answers' ? state.inferences[q.id] : null;
+      if (inf && prev !== undefined && inf.optionIndex !== i) {
+        wrap.dataset.overridden = 'true';
+      } else if (inf && inf.optionIndex === i) {
+        delete wrap.dataset.overridden;
+      }
+      document.querySelectorAll(`input[name="${q.id}"]`).forEach(r => {
+        r.closest('.opt').classList.toggle('selected', r.checked);
+      });
+      refreshBadges(q, wrap, storeKey);
+      updateProgress();
+    });
+    const span = document.createElement('span');
+    span.className = 'opt-label';
+    span.textContent = opt.label;
+    label.appendChild(input);
+    label.appendChild(span);
+    opts.appendChild(label);
+  });
+  wrap.appendChild(opts);
+  return wrap;
+}
+
+function refreshBadges(q, wrap, storeKey) {
+  const badgeContainer = wrap.querySelector('.q-badges');
+  const evidenceEl = wrap.querySelector('.evidence');
+  badgeContainer.innerHTML = '';
+  evidenceEl.style.display = 'none';
+
+  if (q.manualOnly && state.metadata.length > 0) {
+    const b = document.createElement('span');
+    b.className = 'badge badge-manual';
+    b.textContent = 'Requer resposta humana';
+    badgeContainer.appendChild(b);
+    return;
+  }
+
+  const inf = storeKey === 'answers' ? state.inferences[q.id] : null;
+  if (!inf) return;
+
+  const current = state[storeKey][q.id];
+  const isOverridden = current !== undefined && current !== inf.optionIndex;
+
+  const badge = document.createElement('span');
+  if (isOverridden) {
+    badge.className = 'badge badge-override';
+    badge.textContent = 'Manualmente ajustado';
+  } else {
+    badge.className = 'badge badge-auto';
+    badge.textContent = 'Auto-preenchido';
+  }
+  badgeContainer.appendChild(badge);
+
+  evidenceEl.innerHTML = `<strong>Dado da org${state.metadata.length > 1 ? '(s)' : ''}:</strong> ${inf.evidence}${inf.sources && inf.sources.length ? ` <span style="opacity:0.7;">(${inf.sources.join(' · ')})</span>` : ''}`;
+  evidenceEl.style.display = 'block';
+}
+
+function applyInferencesToUI() {
+  document.querySelectorAll('.q').forEach(wrap => {
+    const qId = wrap.dataset.qid;
+    const q = questions.find(x => x.id === qId) || hubFedQuestions.find(x => x.id === qId);
+    if (!q) return;
+    const storeKey = questions.find(x => x.id === qId) ? 'answers' : 'hubFed';
+    const inf = storeKey === 'answers' ? state.inferences[qId] : null;
+
+    if (inf && state[storeKey][qId] === undefined) {
+      state[storeKey][qId] = inf.optionIndex;
+      const radios = wrap.querySelectorAll('input[type="radio"]');
+      radios.forEach((r, idx) => {
+        r.checked = idx === inf.optionIndex;
+        r.closest('.opt').classList.toggle('selected', r.checked);
+      });
+    }
+    refreshBadges(q, wrap, storeKey);
+  });
+  updateProgress();
+}
+
+function updateProgress() {
+  const total = questions.length;
+  const done = Object.keys(state.answers).length;
+  const pct = (done / total) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `${done} / ${total} respondidas`;
+  document.getElementById('submitBtn').disabled = done < total;
+  document.getElementById('hubFedSection').classList.toggle('visible', done >= total - 4);
+}
+
+function compute() {
+  let single = 0, multi = 0;
+  const overrides = [];
+  const contributions = [];
+
+  questions.forEach(q => {
+    const ans = state.answers[q.id];
+    if (ans === undefined) return;
+    const opt = q.options[ans];
+    single += opt.s;
+    multi += opt.m;
+    if (opt.override === 'FORCE_MULTI') overrides.push({ q: q.text, reason: opt.reason });
+    contributions.push({
+      qText: q.text,
+      chosen: opt.label,
+      reason: opt.reason,
+      leansMulti: opt.m > opt.s,
+      leansSingle: opt.s > opt.m,
+      weight: Math.max(opt.m, opt.s),
+      diff: opt.m - opt.s
+    });
+  });
+
+  const total = single + multi || 1;
+  const multiPct = (multi / total) * 100;
+  const singlePct = (single / total) * 100;
+  const forced = overrides.length > 0;
+  const diffPct = Math.abs(multiPct - singlePct);
+  const borderline = !forced && diffPct < 15;
+
+  let recommendation;
+  if (forced || multi > single) recommendation = 'multi';
+  else recommendation = 'single';
+
+  let subType = null;
+  if (recommendation === 'multi') {
+    let hub = 0, fed = 0;
+    const subContribs = [];
+    hubFedQuestions.forEach(q => {
+      const ans = state.hubFed[q.id];
+      if (ans === undefined) return;
+      const opt = q.options[ans];
+      hub += opt.h;
+      fed += opt.f;
+      subContribs.push({ qText: q.text, reason: opt.reason, leansHub: opt.h > opt.f, leansFed: opt.f > opt.h });
+    });
+    subType = hub >= fed ? 'hub' : 'fed';
+    return { recommendation, subType, single, multi, singlePct, multiPct, forced, overrides, borderline, contributions, subContribs, hub, fed };
+  }
+
+  return { recommendation, subType, single, multi, singlePct, multiPct, forced, overrides, borderline, contributions };
+}
+
+function renderResult(r) {
+  const el = document.getElementById('result');
+  el.innerHTML = '';
+  el.classList.add('visible');
+
+  let heroClass, eyebrowText, titleText, summaryText, resultVariant;
+
+  if (r.forced) {
+    heroClass = r.subType === 'fed' ? 'multi-fed' : 'multi-hub';
+    resultVariant = 'result-multi';
+    eyebrowText = 'Recomendação · multi-org obrigatório';
+    titleText = r.subType === 'fed' ? 'Multi-Org — Federated' : 'Multi-Org — Hub-and-Spoke';
+    summaryText = 'Um ou mais bloqueadores regulatórios/de segurança forçam multi-org independentemente dos demais critérios.';
+  } else if (r.borderline) {
+    heroClass = 'borderline';
+    resultVariant = 'result-borderline';
+    eyebrowText = 'Recomendação · zona de borda';
+    titleText = 'Decisão borderline — priorize single-org com escrutínio';
+    summaryText = 'Diferença de scores é pequena. Antes de comprometer com multi-org, exaure alternativas em single-org: 2GP, Restriction Rules, Scoping Rules, Data Cloud, Experience Cloud e Shield encryption.';
+  } else if (r.recommendation === 'single') {
+    heroClass = 'single';
+    resultVariant = 'result-single';
+    eyebrowText = 'Recomendação';
+    titleText = 'Single Org';
+    summaryText = 'Os critérios avaliados favorecem consolidação em uma única org. Ganhos: 360º nativo, colaboração, admin único, TCO menor.';
+  } else {
+    heroClass = r.subType === 'fed' ? 'multi-fed' : 'multi-hub';
+    resultVariant = 'result-multi';
+    eyebrowText = 'Recomendação';
+    titleText = r.subType === 'fed' ? 'Multi-Org — Federated' : 'Multi-Org — Hub-and-Spoke';
+    summaryText = r.subType === 'fed'
+      ? 'Multi-org com sync peer-to-peer. Válido em cenário transitório de M&A com deadline ou quando cada BU é master de sua fatia.'
+      : 'Multi-org com uma master org distribuindo dados para satélites autônomas. Padrão preferido para multi-org permanente.';
+  }
+
+  const hero = document.createElement('div');
+  hero.className = `result-hero ${heroClass} ${resultVariant}`;
+  hero.innerHTML = `
+    <div class="result-eyebrow">${eyebrowText}</div>
+    <div class="result-title">${titleText}</div>
+    <p class="result-summary">${summaryText}</p>
+    <div class="score-bar">
+      <div class="score-single" style="width:${r.singlePct}%"></div>
+      <div class="score-multi" style="width:${r.multiPct}%"></div>
+    </div>
+    <div class="score-legend">
+      <span>Single: ${r.single} pts (${r.singlePct.toFixed(0)}%)</span>
+      <span>Multi: ${r.multi} pts (${r.multiPct.toFixed(0)}%)</span>
+    </div>
+    <details class="score-explainer">
+      <summary>Como o score é calculado</summary>
+      <div class="score-explainer-body">
+        <p>Cada opção de resposta traz dois pesos declarados: <code>s</code> (pró-single-org) e <code>m</code> (pró-multi-org). O motor soma ambos ao longo das 14 perguntas.</p>
+        <ul>
+          <li><strong>Pesos por importância</strong> — perguntas de bloqueador (regulação, features irreversíveis) têm faixas maiores (0-8); moderadas (2GP, sharing) vão até 4.</li>
+          <li><strong>Recomendação</strong> = maior dos dois somatórios. Se a diferença absoluta é pequena, o resultado aparece como <em>borderline</em>.</li>
+          <li><strong>Overrides manuais</strong> (residência de dados legal, isolamento regulatório) sobrepõem o score e forçam multi-org mesmo se single vencer numericamente.</li>
+          <li>O score é <strong>orientativo</strong> — indica direção, não veredicto único. Use como ponto de partida do ARB.</li>
+        </ul>
+      </div>
+    </details>
+  `;
+  el.appendChild(hero);
+
+  if (r.forced) {
+    const banner = document.createElement('div');
+    banner.className = 'card override-banner';
+    banner.innerHTML = `<strong>Bloqueador acionado</strong> — os seguintes critérios forçam multi-org e sobrepõem qualquer score:`;
+    const ul = document.createElement('ul');
+    ul.className = 'justif-list';
+    r.overrides.forEach(o => {
+      const li = document.createElement('li');
+      li.className = 'multi';
+      li.innerHTML = `<strong>${o.q}</strong>${o.reason}`;
+      ul.appendChild(li);
+    });
+    banner.appendChild(ul);
+    el.appendChild(banner);
+  }
+
+  const justifCard = document.createElement('div');
+  justifCard.className = 'card';
+
+  const pro = r.contributions
+    .filter(c => (r.recommendation === 'multi' && c.leansMulti) || (r.recommendation === 'single' && c.leansSingle))
+    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
+    .slice(0, 5);
+  const con = r.contributions
+    .filter(c => (r.recommendation === 'multi' && c.leansSingle) || (r.recommendation === 'single' && c.leansMulti))
+    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
+    .slice(0, 3);
+
+  const proBlock = document.createElement('div');
+  proBlock.className = 'justif-block';
+  proBlock.innerHTML = `<h3>Critérios que sustentam a recomendação</h3>`;
+  const proUl = document.createElement('ul');
+  proUl.className = 'justif-list';
+  pro.forEach(c => {
+    const li = document.createElement('li');
+    li.className = r.recommendation === 'multi' ? 'multi' : 'single';
+    li.innerHTML = `<strong>${c.qText}</strong>${c.reason}`;
+    proUl.appendChild(li);
+  });
+  proBlock.appendChild(proUl);
+  justifCard.appendChild(proBlock);
+
+  if (con.length > 0) {
+    const conBlock = document.createElement('div');
+    conBlock.className = 'justif-block';
+    conBlock.innerHTML = `<h3>Contra-argumentos a considerar</h3>`;
+    const conUl = document.createElement('ul');
+    conUl.className = 'justif-list';
+    con.forEach(c => {
+      const li = document.createElement('li');
+      li.className = 'warn';
+      li.innerHTML = `<strong>${c.qText}</strong>${c.reason}`;
+      conUl.appendChild(li);
+    });
+    conBlock.appendChild(conUl);
+    justifCard.appendChild(conBlock);
+  }
+
+  if (r.subType && r.subContribs) {
+    const subBlock = document.createElement('div');
+    subBlock.className = 'justif-block';
+    subBlock.innerHTML = `<h3>Por que ${r.subType === 'fed' ? 'Federated' : 'Hub-and-Spoke'} (Hub: ${r.hub} · Fed: ${r.fed})</h3>`;
+    const subUl = document.createElement('ul');
+    subUl.className = 'justif-list';
+    r.subContribs
+      .filter(c => (r.subType === 'hub' && c.leansHub) || (r.subType === 'fed' && c.leansFed))
+      .forEach(c => {
+        const li = document.createElement('li');
+        li.className = 'multi';
+        li.innerHTML = `<strong>${c.qText}</strong>${c.reason}`;
+        subUl.appendChild(li);
+      });
+    subBlock.appendChild(subUl);
+    justifCard.appendChild(subBlock);
+  }
+
+  if (r.borderline) {
+    const warnBlock = document.createElement('div');
+    warnBlock.className = 'justif-block';
+    warnBlock.innerHTML = `<h3>Alternativas em single-org a esgotar antes de decidir multi</h3>`;
+    const wUl = document.createElement('ul');
+    wUl.className = 'justif-list';
+    [
+      ['Unlocked Packages (2GP)', 'Modulariza metadata sem custo de licença, isola releases por BU.'],
+      ['Restriction Rules + Scoping Rules', 'Segrega visibilidade sem hierarquia complexa de roles.'],
+      ['Data Cloud como hub de identidade', 'Resolve 360º sem duplicar dados operacionais.'],
+      ['Experience Cloud + permission sets', 'Personaliza UX por BU dentro do mesmo tenant.'],
+      ['Shield Platform Encryption + FAT', 'Compliance sem separar tenants.']
+    ].forEach(([k, v]) => {
+      const li = document.createElement('li');
+      li.className = 'warn';
+      li.innerHTML = `<strong>${k}</strong>${v}`;
+      wUl.appendChild(li);
+    });
+    warnBlock.appendChild(wUl);
+    justifCard.appendChild(warnBlock);
+  }
+
+  el.appendChild(justifCard);
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.getElementById('form').addEventListener('submit', e => {
+  e.preventDefault();
+  const r = compute();
+  renderResult(r);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state.answers = {};
+  state.hubFed = {};
+  document.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = false; r.closest('.opt').classList.remove('selected'); });
+  document.getElementById('result').classList.remove('visible');
+  document.getElementById('result').innerHTML = '';
+  if (state.metadata.length > 0) applyInferencesToUI();
+  else document.querySelectorAll('.q').forEach(w => refreshBadges(
+    questions.find(x => x.id === w.dataset.qid) || hubFedQuestions.find(x => x.id === w.dataset.qid), w,
+    questions.find(x => x.id === w.dataset.qid) ? 'answers' : 'hubFed'
+  ));
+  updateProgress();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+document.getElementById('metadataFile').addEventListener('change', async e => {
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
+  const loaded = [];
+  const errors = [];
+  for (const f of files) {
+    try {
+      const text = await f.text();
+      const parsed = JSON.parse(text);
+      loaded.push(normalizeOrgMetadata(parsed, f.name));
+    } catch (err) {
+      errors.push(`${f.name}: ${err.message}`);
+    }
+  }
+  state.metadata = loaded;
+  runInferences();
+  renderMetadataLoaded(loaded, errors);
+  applyInferencesToUI();
+  document.getElementById('clearMetadataBtn').style.display = loaded.length ? 'inline-block' : 'none';
+  if (typeof updateAllocationButton === 'function') updateAllocationButton();
+  e.target.value = '';
+});
+
+document.getElementById('clearMetadataBtn').addEventListener('click', () => {
+  const inferredIds = Object.keys(state.inferences);
+  inferredIds.forEach(qId => {
+    const wrap = document.querySelector(`.q[data-qid="${qId}"]`);
+    if (wrap && wrap.dataset.overridden !== 'true') {
+      delete state.answers[qId];
+      wrap.querySelectorAll('input[type="radio"]').forEach(r => {
+        r.checked = false;
+        r.closest('.opt').classList.remove('selected');
+      });
+    }
+    if (wrap) delete wrap.dataset.overridden;
+  });
+  state.metadata = [];
+  state.inferences = {};
+  document.getElementById('metadataLoaded').classList.remove('visible');
+  document.getElementById('metadataLoaded').innerHTML = '';
+  document.getElementById('clearMetadataBtn').style.display = 'none';
+  document.querySelectorAll('.q').forEach(w => {
+    const q = questions.find(x => x.id === w.dataset.qid) || hubFedQuestions.find(x => x.id === w.dataset.qid);
+    const storeKey = questions.find(x => x.id === w.dataset.qid) ? 'answers' : 'hubFed';
+    refreshBadges(q, w, storeKey);
+  });
+  updateProgress();
+  if (typeof updateAllocationButton === 'function') updateAllocationButton();
+});
+
+function renderMetadataLoaded(orgs, errors) {
+  const el = document.getElementById('metadataLoaded');
+  const inferredCount = Object.keys(state.inferences).length;
+  const manualCount = questions.filter(q => q.manualOnly).length;
+  const parts = [];
+  parts.push(`<strong>${orgs.length} org(s) carregada(s):</strong> ${orgs.map(o => o.orgName).join(', ')}`);
+  parts.push(`<ul><li>${inferredCount} pergunta(s) pré-preenchida(s) automaticamente</li><li>${manualCount} pergunta(s) permanecem obrigatoriamente manuais (marcadas com badge)</li></ul>`);
+  if (errors.length) parts.push(`<div style="color:var(--multi);margin-top:8px;"><strong>Erros:</strong> ${errors.join('; ')}</div>`);
+  el.innerHTML = parts.join('');
+  el.classList.add('visible');
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.copy-btn');
+  if (!btn) return;
+  e.preventDefault();
+  let text = btn.dataset.copy;
+  if (!text && btn.dataset.copyTarget) {
+    const target = document.getElementById(btn.dataset.copyTarget);
+    if (target) text = target.textContent;
+  }
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const original = btn.textContent;
+    btn.textContent = 'Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+  });
+});
+
+// ============================================================
+// MODO ALOCAÇÃO — perfil do processo, filtragem e renderização
+// ============================================================
+
+const processSections = [
+  { title: 'Identificação', desc: 'Contexto básico do processo.', fields: [
+    { id: 'name', type: 'text', label: 'Nome do processo', hint: 'Ex: Onboarding de cliente, Gestão de campanhas, Ticket de suporte, Contratação B2B.', required: true },
+    { id: 'lobOwner', type: 'text', label: 'LOB / BU owner', hint: 'Área/unidade dona do processo (ex: Vendas B2B, Varejo, Marketing, Serviços, Operações, Público).', required: true },
+    { id: 'criticality', type: 'select', label: 'Criticidade', hint: 'Determina exigências de Full Copy sandbox, RTO/RPO e support tier.',
+      options: [ ['','Selecione…'], ['low','Baixa'], ['medium','Média'], ['high','Alta'], ['critical','Crítica'] ] }
+  ]},
+  { title: 'Regulatório & Compliance', desc: 'Perímetro legal e requisitos de conformidade.', fields: [
+    { id: 'regulator', type: 'select', label: 'Regulador aplicável', hint: 'Bloqueador para orgs com regulador diferente.', required: true,
+      options: [ ['','Selecione…'], ['NONE','Não regulado / apoio interno'], ['LGPD','LGPD-only (dado pessoal, sem regulador setorial)'], ['BACEN','BACEN (banking, meios de pagamento, câmbio)'], ['CVM','CVM (mercado de capitais, asset management)'], ['SUSEP','SUSEP (seguros)'], ['PREVIC','Previc (previdência complementar)'], ['ANS','ANS (saúde suplementar)'], ['ANEEL','ANEEL (energia)'], ['ANATEL','ANATEL (telecom)'], ['GDPR','GDPR (operação europeia)'], ['CCPA','CCPA (operação Califórnia)'], ['HIPAA','HIPAA (saúde EUA)'], ['OTHER','Outro / múltiplos'] ] },
+    { id: 'dataController', type: 'select', label: 'Data controller LGPD', hint: 'Entidade legal responsável pelos dados pessoais.', required: true,
+      options: [ ['','Selecione…'], ['SAME','Mesmo controller de orgs existentes'], ['DIFFERENT','Controller distinto (JV, subsidiária)'], ['UNKNOWN','A definir com Legal/DPO'] ] },
+    { id: 'complianceScope', type: 'checkbox', label: 'Escopo de compliance', options: [
+      ['pci','Toca dados de cartão (PCI-DSS)'],
+      ['sox','Financeiro/contábil (SOX)']
+    ] },
+    { id: 'requiresConsentFramework', type: 'select', label: 'Requer consent framework?', hint: 'Opt-in de comunicação com preference center unificado.',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim (opt-in / preference center)'] ] },
+    { id: 'requiresDataMasking', type: 'select', label: 'Requer Data Mask em sandbox?', hint: 'LGPD-sensível — dados anonimizados obrigatoriamente.',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
+  ]},
+  { title: 'Arquitetura de dados', desc: 'Modelo, master data, features irreversíveis.', fields: [
+    { id: 'dataModel', type: 'select', label: 'Data model exigido', hint: 'Features irreversíveis (Person Account, FSC) restringem candidatas. Escolha o modelo primário do processo.', required: true,
+      options: [ ['','Selecione…'], ['b2b','B2B padrão (Account/Contact/Opportunity)'], ['personAccount','Person Account (B2C — pessoa é a entidade central)'], ['fsc','Financial Services Cloud'], ['healthcloud','Health Cloud'], ['nonprofit','Nonprofit Success Pack'], ['education','Education Cloud'], ['manufacturing','Manufacturing Cloud'], ['custom','Custom / híbrido'] ] },
+    { id: 'features', type: 'checkbox', label: 'Features especiais exigidas',
+      options: [ ['multiCurrency','Multi-Currency'], ['shield','Shield Encryption'], ['fat','Field Audit Trail'], ['eventMonitoring','Event Monitoring'], ['dataCloud','Data Cloud'], ['agentforce','Agentforce'], ['experienceCloud','Experience Cloud'] ] },
+    { id: 'requiredSharingModel', type: 'select', label: 'Sharing model exigido', hint: 'Compatibilidade com o modelo da org candidata.',
+      options: [ ['','(qualquer)'], ['private','Private'], ['public','Public Read/Write'], ['controlled','Controlled by parent'] ] },
+    { id: 'touchesMasterDataEntities', type: 'text', label: 'Entidades de master data que o processo toca', hint: 'Lista separada por vírgula. Ex: Account, Contact, Product.' },
+    { id: 'masterDataRole', type: 'select', label: 'Papel MDM do processo', hint: 'Determina se contribui ou consome fonte da verdade.',
+      options: [ ['','Selecione…'], ['owner','Owner (fonte da verdade)'], ['consumer','Consumer (recebe fonte)'] ] },
+    { id: 'requiredFieldHistoryMonths', type: 'text', label: 'Retenção mínima de Field History (meses)', hint: 'Vazio = não exigido.' },
+    { id: 'requiresBigObjects', type: 'select', label: 'Requer Big Objects para arquivamento?',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
+  ]},
+  { title: 'Volume, capacidade e concorrência', desc: 'Estimativas para projeção pós-alocação.', fields: [
+    { id: 'estimatedRecordsPerYear', type: 'text', label: 'Volume: registros/ano', hint: 'Número aproximado. Vazio → warn no filtro projection.' },
+    { id: 'estimatedApiCallsDaily', type: 'text', label: 'Chamadas API/dia (média)', hint: 'Número aproximado.' },
+    { id: 'peakApiPerSec', type: 'text', label: 'Pico API/segundo', hint: 'Rajada em janela pequena — o que quebra Concurrent limits.' },
+    { id: 'peakEventsPerSec', type: 'text', label: 'Pico eventos/segundo', hint: 'Rajada de Platform Events.' },
+    { id: 'usesLongRunning', type: 'select', label: 'Usa Concurrent Long-Running Requests?',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] },
+    { id: 'usesFuture', type: 'select', label: 'Usa @future methods?',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] },
+    { id: 'usesQueueable', type: 'select', label: 'Usa Queueable com chaining?',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
+  ]},
+  { title: 'Cadência e DevOps', desc: 'Release, ambiente e sandbox.', fields: [
+    { id: 'cadence', type: 'select', label: 'Cadência de release', hint: 'Se maior que a da org, custo político mata a entrega.', required: true,
+      options: [ ['','Selecione…'], ['weekly','Semanal ou mais frequente'], ['biweekly','Quinzenal'], ['monthly','Mensal'], ['quarterly','Trimestral'] ] },
+    { id: 'requiresCanaryRelease', type: 'select', label: 'Requer canary/feature-flag release?',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] },
+    { id: 'requiresCoordinatedSandbox', type: 'select', label: 'Requer refresh de sandbox coordenado?', hint: 'Processo com CDC/PE inter-sandbox exige refresh coordenado.',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
+  ]},
+  { title: 'Integrações e event bus', desc: 'Contratos entre orgs, Platform Events, tenants externos.', fields: [
+    { id: 'integratesWithOrgs', type: 'text', label: 'Integra com outras orgs (nomes)', hint: 'Ex: OrgCartoes, OrgSeguros.' },
+    { id: 'maxInterOrgLatencyMs', type: 'text', label: 'SLA de latência inter-org (ms)', hint: 'P95 aceitável. 0 = sem exigência.' },
+    { id: 'publishesEvents', type: 'text', label: 'Platform Events publicados pelo processo', hint: 'Formato: nome[:eventos/dia]. Ex: AccountCDC, CustomerLifecycleEvent:50000.' },
+    { id: 'consumesEvents', type: 'text', label: 'Platform Events consumidos pelo processo', hint: 'Ex: SanctionsHit, PaymentAuthorizedEvent.' },
+    { id: 'requiresCdc', type: 'text', label: 'CDC entities exigidos', hint: 'Ex: Account, Contact, CustomObject__c.' },
+    { id: 'requiresPubSubApi', type: 'select', label: 'Exige Pub/Sub API (gRPC)?', hint: 'Arquitetura event-driven moderna.',
+      options: [ ['','Selecione…'], ['false','Não (tolera CometD)'], ['true','Sim (gRPC Pub/Sub)'] ] },
+    { id: 'externalFeeds', type: 'text', label: 'Feeds externos exigidos', hint: 'Ex: sanctions, kyc, creditbureau.' },
+    { id: 'requiredTenants', type: 'text', label: 'Tenants externos exigidos', hint: 'Ex: marketingCloud, auth0, sap.' }
+  ]},
+  { title: 'Packages e namespace', desc: 'Managed packages, licenças de terceiros e conflitos.', fields: [
+    { id: 'requiresNamespace', type: 'text', label: 'Requer namespace específico?', hint: 'Se o processo virá de AppExchange ou usa namespace reservado.' },
+    { id: 'modifiesPackageNamespace', type: 'text', label: 'Modifica metadata de package instalado?', hint: 'Namespace do package que o processo altera.' },
+    { id: 'requiredPackageVersionsJson', type: 'text', label: 'Versões mínimas de packages (JSON)', hint: 'Ex: {"cpq":"244.0","industry_pkg":"2.5.0"}. Motor valida versão instalada por namespace.' },
+    { id: 'dependsOnVendorContracts', type: 'text', label: 'Vendors críticos (contratos)', hint: 'Lista separada por vírgula. Motor avisa se algum está expirando.' }
+  ]},
+  { title: 'Localização', desc: 'Timezone, idiomas.', fields: [
+    { id: 'targetTimezone', type: 'text', label: 'Timezone do processo', hint: 'Ex: America/Sao_Paulo, multi, global.' },
+    { id: 'requiredLanguages', type: 'text', label: 'Idiomas exigidos', hint: 'Lista separada por vírgula. Ex: pt_BR, en_US.' }
+  ]},
+  { title: 'Time, custo e capacidade humana', desc: 'Bench, licenças, budget recorrente.', fields: [
+    { id: 'newUsers', type: 'text', label: 'Novos usuários que o processo adiciona', hint: 'Estimativa de headcount de usuários finais.' },
+    { id: 'userLicenseRequired', type: 'select', label: 'Tipo de licença exigido', hint: 'Motor valida disponibilidade.',
+      options: [ ['','(qualquer / não especificado)'], ['Salesforce','Salesforce'], ['Platform','Platform'], ['ExperienceCloud','Experience Cloud'] ] },
+    { id: 'monthlyBudgetUSD', type: 'text', label: 'Budget mensal recorrente (US$)', hint: 'Motor projeta users × custo + add-ons.' },
+    { id: 'requiredHeadcount', type: 'text', label: 'FTE do time dev exigido', hint: 'Estimativa de headcount técnico.' },
+    { id: 'requiredSkills', type: 'text', label: 'Skills técnicas exigidas', hint: 'Ex: apex, lwc, flow, integration.' },
+    { id: 'hasHighConsumption', type: 'select', label: 'Alto consumo (Data Cloud/Agentforce credit)?', hint: 'Exige FinOps observability.',
+      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
+  ]},
+  { title: 'Backup, DR e migração', desc: 'RTO/RPO exigidos, custo de migração one-off.', fields: [
+    { id: 'requiredRtoHours', type: 'text', label: 'RTO exigido (horas)', hint: 'Recovery Time Objective. Vazio = 24h.' },
+    { id: 'requiredRpoHours', type: 'text', label: 'RPO exigido (horas)', hint: 'Recovery Point Objective. Vazio = 24h.' },
+    { id: 'permSetsToClone', type: 'text', label: 'Migração: perm sets a clonar', hint: 'Estimativa quantitativa.' },
+    { id: 'triggersToRefactor', type: 'text', label: 'Migração: triggers a refatorar', hint: 'Estimativa quantitativa.' },
+    { id: 'flowsToMigrate', type: 'text', label: 'Migração: flows a migrar', hint: 'Estimativa quantitativa.' }
+  ]}
+];
+
+const processFields = processSections.flatMap(s => s.fields);
+
+function renderProcessForm() {
+  const root = document.getElementById('processForm');
+  processSections.forEach((section, idx) => {
+    const secHeader = document.createElement('div');
+    secHeader.className = 'process-section-header';
+    secHeader.innerHTML = `<div class="process-section-title">${section.title}</div>${section.desc ? `<div class="process-section-desc">${section.desc}</div>` : ''}`;
+    if (idx > 0) secHeader.style.marginTop = '18px';
+    root.appendChild(secHeader);
+
+    section.fields.forEach(f => {
+      const wrap = document.createElement('div');
+      wrap.className = 'process-field';
+      const label = document.createElement('label');
+      label.textContent = f.label + (f.required ? ' *' : '');
+      label.htmlFor = 'pf_' + f.id;
+      wrap.appendChild(label);
+      if (f.hint) {
+        const h = document.createElement('div'); h.className = 'hint'; h.textContent = f.hint; wrap.appendChild(h);
+      }
+      if (f.type === 'text') {
+        const input = document.createElement('input');
+        input.type = 'text'; input.id = 'pf_' + f.id;
+        input.addEventListener('input', () => {
+          if (f.id === 'requiredPackageVersionsJson') {
+            state.process.requiredPackageVersions = safeParseJson(input.value.trim()) || {};
+          } else {
+            state.process[f.id] = input.value.trim();
+          }
+          updateAllocationButton();
+        });
+        wrap.appendChild(input);
+      } else if (f.type === 'select') {
+        const sel = document.createElement('select');
+        sel.id = 'pf_' + f.id;
+        f.options.forEach(([v, lbl]) => {
+          const o = document.createElement('option'); o.value = v; o.textContent = lbl; sel.appendChild(o);
+        });
+        sel.addEventListener('change', () => { state.process[f.id] = sel.value; updateAllocationButton(); });
+        wrap.appendChild(sel);
+      } else if (f.type === 'checkbox') {
+        state.process[f.id] = [];
+        const grid = document.createElement('div'); grid.className = 'checkbox-grid';
+        f.options.forEach(([v, lbl]) => {
+          const label = document.createElement('label'); label.className = 'check-opt';
+          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = v;
+          cb.addEventListener('change', () => {
+            const arr = state.process[f.id];
+            if (cb.checked && !arr.includes(v)) arr.push(v);
+            if (!cb.checked) state.process[f.id] = arr.filter(x => x !== v);
+            label.classList.toggle('selected', cb.checked);
+            updateAllocationButton();
+          });
+          label.appendChild(cb);
+          label.appendChild(document.createTextNode(lbl));
+          grid.appendChild(label);
+        });
+        wrap.appendChild(grid);
+      }
+      root.appendChild(wrap);
+    });
+  });
+}
+
+function safeParseJson(v) { if (!v) return null; try { return JSON.parse(v); } catch { return null; } }
+
+function updateAllocationButton() {
+  const requiredIds = processFields.filter(f => f.required).map(f => f.id);
+  const filled = requiredIds.every(id => {
+    const v = state.process[id];
+    return v && String(v).length > 0;
+  });
+  const hasMeta = state.metadata.length > 0;
+  const btn = document.getElementById('runAllocationBtn');
+  btn.disabled = !(filled && hasMeta);
+  btn.textContent = !hasMeta ? 'Carregue metadata das orgs acima para continuar'
+                  : !filled ? 'Preencha os campos obrigatórios (*)'
+                  : `Filtrar ${state.metadata.length} org(s) candidatas`;
+}
+
+// ---- Motor de filtragem em cascata ----
+
+function evaluateOrgForProcessLocal(org, proc) {
+  return evaluateOrgForProcess(org, proc, state.metadata.map(o => o.orgName));
+}
+function runAllocation() {
+  const proc = state.process;
+  const evaluations = state.metadata.map(org => evaluateOrgForProcessLocal(org, proc));
+  evaluations.sort((a, b) => {
+    const rank = { pass: 0, warn: 1, fail: 2 };
+    if (rank[a.overall] !== rank[b.overall]) return rank[a.overall] - rank[b.overall];
+    return b.score - a.score;
+  });
+  const landscape = analyzeLandscape(evaluations, proc);
+  renderAllocationResult(evaluations, proc, landscape);
+}
+
+function renderAllocationResult(evaluations, proc, landscape) {
+  const el = document.getElementById('allocationResult');
+  el.innerHTML = '';
+  el.classList.add('visible');
+
+  const passing = evaluations.filter(e => e.overall === 'pass');
+  const warning = evaluations.filter(e => e.overall === 'warn');
+  const failing = evaluations.filter(e => e.overall === 'fail');
+
+  // Hero — usa landscape.recommendation como fonte de verdade
+  const hero = document.createElement('div');
+  hero.className = 'result-hero';
+  let eyebrow, title, summary;
+  switch (landscape.recommendation) {
+    case 'reuse':
+      hero.classList.add('single', 'result-single');
+      eyebrow = 'Recomendação · reuso qualificado';
+      title = `Aloque em ${landscape.primaryChoice}`;
+      summary = landscape.summary;
+      break;
+    case 'reuse-with-warnings':
+      hero.classList.add('borderline', 'result-borderline');
+      eyebrow = 'Recomendação · reuso com ressalvas';
+      title = `Melhor candidata: ${landscape.primaryChoice}`;
+      summary = landscape.summary;
+      break;
+    case 'consolidate-first':
+      hero.classList.add('borderline', 'result-borderline');
+      eyebrow = 'Recomendação · consolidar antes de alocar';
+      title = `Consolidar ${Array.isArray(landscape.primaryChoice) ? landscape.primaryChoice.join(' + ') : landscape.primaryChoice}`;
+      summary = landscape.summary;
+      break;
+    case 'new-org':
+      hero.classList.add('multi-hub', 'result-multi');
+      eyebrow = 'Recomendação · nova org justificada';
+      title = 'Criar nova org é a escolha correta';
+      summary = landscape.summary;
+      break;
+    default: // no-viable-option
+      hero.classList.add('multi-hub', 'result-multi');
+      eyebrow = 'Recomendação · sem opção viável';
+      title = 'Nenhuma org atende ao perfil';
+      summary = landscape.summary;
+  }
+  hero.innerHTML = `
+    <div class="result-eyebrow">${eyebrow}</div>
+    <div class="result-title">${title}</div>
+    <p class="result-summary">${summary}</p>
+    <details class="score-explainer">
+      <summary>Como o score e o ranking são calculados</summary>
+      <div class="score-explainer-body">
+        <p>Cada org é avaliada em <strong>45 filtros independentes</strong> agrupados nas seções do formulário (regulatório, arquitetura, capacidade, integrações, packages, backup, team, custo, etc). Cada filtro devolve <code>pass</code>, <code>warn</code> ou <code>fail</code>.</p>
+        <p><strong>Score numérico</strong> — soma linear por filtro:</p>
+        <ul>
+          <li><code>pass</code> = <strong>+3</strong></li>
+          <li><code>warn</code> = <strong>+1</strong></li>
+          <li><code>fail</code> = <strong>−2</strong></li>
+        </ul>
+        <p><strong>Ponderação por criticidade</strong> — só o lado negativo escala. Um <code>fail</code> num processo <code>critical</code> conta como <strong>3×</strong>; num <code>high</code>, 2×; num <code>medium</code>, 1× (referência); num <code>low</code>, 0.5×. <code>pass</code>/<code>warn</code> valem igual para qualquer criticidade. Motivo: um bloqueador legal num processo crítico é bem mais grave que num processo de baixa prioridade, mas um bom fit não é "melhor" por criticidade.</p>
+        <p>Faixa prática: 80-130 é uma org com dados completos e poucas ressalvas; 40-70 indica que muitos campos ficaram vazios (não é sinal de "org ruim", é sinal de "falta informação"). Score bruto <code>scoreRaw</code> (sem ponderação) fica disponível como referência.</p>
+        <p><strong>Status agregado (<code>overall</code>)</strong> é <em>independente do score</em>: basta <strong>um único filtro</strong> em <code>fail</code> para a org inteira ser <code>fail</code>; senão, <code>warn</code> se houver algum warn, senão <code>pass</code>.</p>
+        <p><strong>Ranking</strong> ocorre em duas passadas:</p>
+        <ol>
+          <li>Status primeiro: <code>pass</code> &lt; <code>warn</code> &lt; <code>fail</code> — uma org <code>pass</code> com score baixo <em>sempre</em> vem antes de uma org <code>warn</code> com score alto.</li>
+          <li>Score ponderado desempata entre orgs com o mesmo status.</li>
+        </ol>
+        <p><strong>Limitação remanescente:</strong> filtros ainda pesam igual entre si — um <code>regulator=fail</code> (bloqueador legal) conta o mesmo que um <code>documentation=fail</code>. O score é <strong>orientativo</strong>. A leitura arquitetural exige olhar quais filtros falharam, não só o número.</p>
+      </div>
+    </details>
+  `;
+  el.appendChild(hero);
+
+  // Ecosystem view — consolidations, rebalancing, newOrgRationale
+  if (landscape.consolidations.length || landscape.rebalancing.length || landscape.newOrgRationale.length) {
+    const ecoCard = document.createElement('div');
+    ecoCard.className = 'card';
+    ecoCard.innerHTML = `<p class="section-title">Visão do ecossistema (${landscape.stats.total} org${landscape.stats.total > 1 ? 's' : ''} avaliada${landscape.stats.total > 1 ? 's' : ''})</p>
+      <p class="section-sub">Análise que olha o landscape inteiro, não org-por-org. Traz consolidações possíveis, oportunidades de rebalanceamento e critérios positivos para justificar uma org nova.</p>`;
+
+    if (landscape.newOrgRationale.length) {
+      const div = document.createElement('div');
+      div.className = 'eco-block eco-neworg';
+      div.innerHTML = `<strong>Critérios positivos para nova org (${landscape.newOrgRationale.length})</strong>`;
+      const ul = document.createElement('ul');
+      landscape.newOrgRationale.forEach(r => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${escapeHtml(r.criterion)}</strong> — ${escapeHtml(r.detail)}`;
+        ul.appendChild(li);
+      });
+      div.appendChild(ul);
+      ecoCard.appendChild(div);
+    }
+
+    if (landscape.consolidations.length) {
+      const div = document.createElement('div');
+      div.className = 'eco-block eco-consolid';
+      div.innerHTML = `<strong>Consolidações possíveis (${landscape.consolidations.length})</strong>`;
+      const ul = document.createElement('ul');
+      landscape.consolidations.forEach(c => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${escapeHtml(c.orgs.join(' + '))}</strong> — ${escapeHtml(c.rationale)}. <em>${escapeHtml(c.savingsEstimate)}</em>.`;
+        ul.appendChild(li);
+      });
+      div.appendChild(ul);
+      ecoCard.appendChild(div);
+    }
+
+    if (landscape.rebalancing.length) {
+      const div = document.createElement('div');
+      div.className = 'eco-block eco-rebalance';
+      div.innerHTML = `<strong>Load rebalancing (${landscape.rebalancing.length})</strong>`;
+      const ul = document.createElement('ul');
+      landscape.rebalancing.forEach(r => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>${escapeHtml(r.heavy)} → ${escapeHtml(r.light)}</strong> — ${escapeHtml(r.rationale)}.`;
+        ul.appendChild(li);
+      });
+      div.appendChild(ul);
+      ecoCard.appendChild(div);
+    }
+
+    el.appendChild(ecoCard);
+  }
+
+  // Perfil resumido
+  const profileCard = document.createElement('div');
+  profileCard.className = 'card';
+  profileCard.innerHTML = `
+    <p class="section-title">Perfil do processo</p>
+    <div style="font-size:13px;color:var(--ink-soft);line-height:1.7;">
+      <strong style="color:var(--ink);">${escapeHtml(proc.name || '(sem nome)')}</strong> · LOB: ${escapeHtml(proc.lobOwner || '-')}<br>
+      Regulador: <strong>${proc.regulator || '-'}</strong> · Data controller LGPD: <strong>${proc.dataController || '-'}</strong><br>
+      Data model: <strong>${proc.dataModel || '-'}</strong> · Cadência: <strong>${proc.cadence || '-'}</strong> · Volume: <strong>${proc.estimatedRecordsPerYear ? proc.estimatedRecordsPerYear + ' registros/ano' : '-'}</strong><br>
+      Features: ${(proc.features || []).length ? proc.features.join(', ') : '<em>nenhuma</em>'}
+    </div>
+  `;
+  el.appendChild(profileCard);
+
+  // Ranking
+  const rankingCard = document.createElement('div');
+  rankingCard.className = 'card';
+  rankingCard.innerHTML = `<p class="section-title">Ranking de candidatas (${evaluations.length} org${evaluations.length>1?'s':''})</p>`;
+
+  const sections = [['pass','Elegíveis — passam em todos os filtros', passing],
+                    ['warn','Elegíveis com ressalvas — resolver warnings antes', warning],
+                    ['fail','Inelegíveis — bloqueadores hard', failing]];
+  sections.forEach(([status, label, list]) => {
+    if (list.length === 0) return;
+    const h = document.createElement('h3');
+    h.className = 'org-rank ' + status;
+    h.style.margin = '18px 0 8px'; h.style.fontSize = '11px';
+    h.textContent = `${label} (${list.length})`;
+    rankingCard.appendChild(h);
+    list.forEach((ev, idx) => {
+      const card = document.createElement('details');
+      card.className = 'org-card ' + ev.overall;
+      if (idx === 0 && status === 'pass') card.setAttribute('open', '');
+      const failCount = ev.filters.filter(f => f.status === 'fail').length;
+      const warnCount = ev.filters.filter(f => f.status === 'warn').length;
+      const passCount = ev.filters.filter(f => f.status === 'pass').length;
+      const summaryCounts = `<span class="org-card-counts"><span class="cnt pass">${passCount} pass</span><span class="cnt warn">${warnCount} warn</span><span class="cnt fail">${failCount} fail</span></span>`;
+      const head = `<summary class="org-card-summary"><div class="org-card-head"><h4>${idx === 0 && status === 'pass' ? '🏆 ' : ''}${escapeHtml(ev.org.orgName)}${ev.org.lobOwner ? ` <span style="font-weight:400;font-size:12px;color:var(--ink-soft);">· ${escapeHtml(ev.org.lobOwner)}</span>` : ''}</h4><span class="org-rank ${ev.overall}">${summaryCounts} <span class="org-score">score ${ev.score}</span></span></div></summary>`;
+      const chips = ev.filters.map(f => `<span class="filter-chip ${f.status}">${f.label}: ${f.status.toUpperCase()}</span>`).join('');
+      const detail = ev.filters.map(f => `<li><strong style="color:var(--ink);">${f.label}:</strong> ${escapeHtml(f.reason)}</li>`).join('');
+      card.innerHTML = `${head}<div class="org-card-body"><div class="filter-row">${chips}</div><ul class="org-detail">${detail}</ul></div>`;
+      rankingCard.appendChild(card);
+    });
+  });
+  el.appendChild(rankingCard);
+
+  // Alternativas técnicas (sempre exibe — o framework manda esgotar antes de criar org nova)
+  const altCard = document.createElement('div');
+  altCard.className = 'card';
+  altCard.innerHTML = `<p class="section-title">Alternativas técnicas antes de criar nova org</p>
+    <p class="section-sub">Em landscape com muitas orgs, criar mais uma tem custo direto (Full Copy, Shield replicado, licenças, DR, backup). Avalie estas opções primeiro:</p>`;
+  const alts = generateAlternatives(proc, evaluations);
+  alts.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'alt-card';
+    div.innerHTML = `<strong>${a.title}</strong><p>${a.body}</p>`;
+    altCard.appendChild(div);
+  });
+  el.appendChild(altCard);
+
+  // Se não passa nenhuma, exibe plano de sunset obrigatório
+  if (passing.length === 0 && warning.length === 0) {
+    const sunset = document.createElement('div');
+    sunset.className = 'sunset-block';
+    sunset.innerHTML = `<h4>Se nova org: plano de sunset obrigatório (24 meses)</h4>
+      <ol>
+        <li><strong>Justificativa formal:</strong> qual bloqueador impede reuso (regulador, data controller, feature irreversível, capacidade).</li>
+        <li><strong>Sponsor executivo:</strong> nome + área. Sem sponsor, não abre.</li>
+        <li><strong>Data limite de consolidação:</strong> 24 meses após go-live. Se permanente por natureza, formalize no ARB — não como default.</li>
+        <li><strong>Contrato inter-partes LGPD</strong> se data controller distinto.</li>
+        <li><strong>Runbook DR + backup contract</strong> antes do go-live (não depois).</li>
+        <li><strong>ADR publicado</strong> em Confluence/Git — "Processo X foi para nova org porque…".</li>
+        <li><strong>Volte ao Modo Topologia</strong> para decidir a subtopologia (Hub-and-Spoke default, Federated apenas se sync bidirecional inescapável ou M&A transitório).</li>
+      </ol>`;
+    el.appendChild(sunset);
+  }
+
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function generateAlternatives(proc, evaluations) {
+  const alts = [];
+  const anyDataCloud = state.metadata.some(o => o.dataCloudEnabled);
+  const anyExpCloud = state.metadata.some(o => o.experienceCloudEnabled);
+  const any2GP = state.metadata.some(o => o.package2Count > 0);
+
+  if (proc.features && proc.features.includes('dataCloud')) {
+    alts.push({ title: 'Data Cloud como tenant lógico', body: `O processo já pede Data Cloud. ${anyDataCloud ? 'Uma ou mais orgs já têm Data Cloud habilitado — considere alocar como Data Space nessa org em vez de criar tenant novo.' : 'Data Cloud ainda não está habilitado em nenhuma org do landscape. Avalie custo de habilitar + arquitetar como hub de identidade.'}` });
+  } else {
+    alts.push({ title: 'Data Cloud como tenant lógico', body: 'Se o processo precisa unificar dados entre orgs existentes (visão 360º de cliente), Data Cloud resolve sem criar CRM org nova. Read-heavy, com Data Actions para escrita orquestrada.' });
+  }
+
+  alts.push({ title: 'Unlocked Package (2GP) numa org existente', body: any2GP
+    ? `${state.metadata.filter(o => o.package2Count > 0).length} org(s) do landscape já usam 2GP — modularize o processo como package independente, com release cadence própria, sem novo Full Copy sandbox.`
+    : 'Nenhuma org do landscape adota 2GP hoje. Se maturidade DevOps permitir, adotar 2GP resolve autonomia de release sem custo de licença adicional — é pré-requisito para modularizar dentro de single-org.'
+  });
+
+  if (proc.features && proc.features.includes('experienceCloud')) {
+    alts.push({ title: 'Experience Cloud site + permission sets', body: `Processo pede Experience Cloud. ${anyExpCloud ? 'Já existe em uma ou mais orgs — crie um site dedicado com permission sets isolados nessa org, ao invés de tenant novo.' : 'Ativar Experience Cloud numa org existente + permission sets resolve isolamento de UX para parceiros/clientes sem criar CRM org nova.'}` });
+  } else {
+    alts.push({ title: 'Experience Cloud + permission sets', body: 'Se a demanda é isolar UX ou expor Setup para parceiro externo, um site Experience Cloud numa org existente resolve — permission sets isolados, guest user controlado.' });
+  }
+
+  alts.push({ title: 'MuleSoft como canonical layer', body: 'Se o processo precisa orquestrar entre orgs (ex: enriquecer com master data de outra BU), o custo está em MuleSoft/iPaaS, não em criar mais uma org Salesforce. Reduz acoplamento e evita duplicação de dados.' });
+
+  alts.push({ title: 'Shared services / org de plataforma', body: 'Em landscapes com muitas orgs, tipicamente existe uma "org de plataforma" ou corporativa que centraliza capabilities transversais (compliance, master data, gestão de leads, integração). Verifique se o processo cabe lá antes de propor uma org nova.' });
+
+  return alts;
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+document.getElementById('runAllocationBtn').addEventListener('click', runAllocation);
+document.getElementById('resetProcessBtn').addEventListener('click', () => {
+  state.process = {};
+  document.querySelectorAll('#processForm input, #processForm select').forEach(el => {
+    if (el.type === 'checkbox') { el.checked = false; el.closest('.check-opt').classList.remove('selected'); }
+    else { el.value = ''; }
+  });
+  processFields.filter(f => f.type === 'checkbox').forEach(f => { state.process[f.id] = []; });
+  document.getElementById('allocationResult').classList.remove('visible');
+  document.getElementById('allocationResult').innerHTML = '';
+  updateAllocationButton();
+});
+
+renderQuestions();
+updateProgress();
+renderProcessForm();
+updateAllocationButton();
+document.querySelectorAll('.q').forEach(w => {
+  const q = questions.find(x => x.id === w.dataset.qid) || hubFedQuestions.find(x => x.id === w.dataset.qid);
+  const storeKey = questions.find(x => x.id === w.dataset.qid) ? 'answers' : 'hubFed';
+  refreshBadges(q, w, storeKey);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "__README__": "Renomeie para <alias>.manual.json (ex: sdo-250321.manual.json) e ajuste. Todos os campos aqui sobrescrevem os coletados pelo sf CLI. TODOS SÃO OPCIONAIS — o que faltar vira null/0/false e cai como WARN no filtro correspondente. Consulte cada bloco abaixo.",
+
+  "__1_regulatorio_lgpd_compliance__": "Bloco regulatório — humano informa (Legal/DPO). Nada disso vem de sf CLI.",
+  "regulator": "BACEN",
+  "dataControllerLGPD": "Banco XYZ S.A. — CNPJ 00.000.000/0001-00",
+  "lobOwner": "Varejo PF",
+  "pciInScope": true,
+  "soxScope": true,
+  "consentFramework": "Individual",
+
+  "__2_data_model_e_mdm__": "Papel da org no ecossistema de master data. Só o arquiteto sabe.",
+  "orgType": "production",
+  "dataModel": "personAccount",
+  "sharedCustomerBases": ["OrgCartoes", "OrgSeguros"],
+  "masterDataOwnerFor": ["Account", "Contact"],
+  "masterDataConsumerOf": ["Product", "PriceBook"],
+
+  "__3_release_devops__": "Cadência real vs. planejada, canary/bigbang. sf CLI não sabe.",
+  "releaseSchedule": "biweekly",
+  "releaseLeadTimeDays": 14,
+  "envStrategy": "canary",
+  "sandboxRefreshCoordinated": true,
+  "dataMaskEnabled": true,
+
+  "__4_integracoes_e_contratos__": "Contratos CDC/PE inter-org (nomes de contratos publicados/consumidos) + vendors comerciais com contrato vigente.",
+  "publishedContracts": ["AccountCDC", "CustomerLifecycleEvent"],
+  "consumedContracts": ["SanctionsHit", "CreditBureauResponse"],
+  "pubSubApiEnabled": true,
+  "externalFeeds": ["sanctions", "kyc", "creditbureau"],
+  "vendorContractsExpiring": [],
+  "interOrgLatencyMsP95": {
+    "OrgCartoes": 250,
+    "OrgSeguros": 1800
+  },
+
+  "__5_apexguru_signature_success__": "Insights via Setup > ApexGuru (Signature Success Plan). Trend: improving/stable/stable-on-debt/degrading. Sem estes campos, filtro health cai em WARN.",
+  "apexGuruCriticalIssues": 8,
+  "apexGuruSoqlNonSelective": 3,
+  "apexGuruLongRunningApex": 2,
+  "apexGuruGovernorExceptions": 0,
+  "apexGuruTrend": "improving",
+  "apexGuruLastRun": "2026-06-15",
+  "apexGuruTopOffenders": ["AccountTriggerHandler", "OpportunityBatch"],
+
+  "__6_backup_dr__": "Provider + SLA contratado. sf CLI não expõe.",
+  "backupProvider": "OwnBackup",
+  "backupFrequency": "daily",
+  "rtoHours": 4,
+  "rpoHours": 2,
+
+  "__7_team_capacity__": "Bench humano dedicado a esta org — só o gerente do time sabe.",
+  "teamHeadcount": 12,
+  "teamUtilizationPct": 55,
+  "teamSkills": ["apex", "lwc", "flow", "integration"],
+
+  "__8_support_incidents_docs__": "Contrato de suporte SF + histórico operacional + score de documentação (avaliação humana 0-100).",
+  "supportTier": "signature",
+  "incidentsLast12mo": 1,
+  "uptimePct": 99.92,
+  "documentationScore": 78,
+
+  "__9_ux_overhead__": "Contadores UX que pesam adição de processo. Pode ser preenchido via Optimizer PDF.",
+  "tabCount": 65,
+  "layoutCount": 120,
+  "recordTypeCount": 35,
+
+  "__10_finops_e_custo__": "FinOps observability + custo unitário (do contrato Salesforce/Frame Agreement).",
+  "finopsObservability": true,
+  "costPerUserMonthly": 150,
+  "addonRunCostMonthly": 5000,
+
+  "__11_retencao_growth__": "Retenção de Field History (contratada) + tendência de crescimento (medida ou estimada).",
+  "fieldHistoryRetentionMonths": 60,
+  "bigObjectsEnabled": true,
+  "storageGrowthPctPerMonth": 1,
+
+  "__12_installed_packages_extra__": "Complementa o que sf CLI coletou. Adicione licenseType e allowsExtension (sf CLI não sabe). Se declarado aqui, sobrescreve.",
+  "installedPackages": [
+    { "namespace": "FinServ", "name": "Financial Services Cloud", "version": "244.10", "licenseType": "AppExchange", "allowsExtension": true },
+    { "namespace": "nCino", "name": "nCino Banking", "version": "2.5.0", "licenseType": "OEM", "allowsExtension": false }
+  ]
+}
