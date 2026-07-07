@@ -292,6 +292,17 @@ scenarios.push({
   orgs: [goldOrg({ storagePct: 0, apiUsagePct: 0, customObjectLimitPct: 0, customObjectCount: 0 })], process: goldProc(), target: 'OrgGold',
   expect: { filterKey: 'capacity', status: 'pass' }
 });
+scenarios.push({
+  // Medição parcial: só storage medido (alto) → usa a métrica disponível, não é mascarado por null.
+  name: 'capacity WARN — medição parcial (só storage medido, apertado)',
+  orgs: [goldOrg({ storagePct: 80, apiUsagePct: null, customObjectLimitPct: null, customObjectCount: 0 })], process: goldProc(), target: 'OrgGold',
+  expect: { filterKey: 'capacity', status: 'warn' }
+});
+scenarios.push({
+  name: 'capacity PASS — medição parcial (só API medida, folgada)',
+  orgs: [goldOrg({ storagePct: null, apiUsagePct: 10, customObjectLimitPct: null, customObjectCount: 0 })], process: goldProc(), target: 'OrgGold',
+  expect: { filterKey: 'capacity', status: 'pass' }
+});
 
 // ============================================================
 // FILTRO 6: health / ApexGuru (pass/warn/fail)
@@ -511,6 +522,13 @@ scenarios.push({
   orgs: [goldOrg({ fullCopySandboxes: 0, partialCopySandboxes: 1, developerSandboxes: 2 })],
   process: goldProc({ criticality: 'critical' }), target: 'OrgGold',
   expect: { filterKey: 'sandbox', status: 'fail' }
+});
+scenarios.push({
+  // Data de refresh inválida não deve gerar "NaN dias" nem passar silenciosamente pelo cálculo.
+  name: 'sandbox PASS — data de refresh inválida cai em noRefreshDate (sem NaN)',
+  orgs: [goldOrg({ fullCopySandboxes: 2, lastSandboxRefresh: 'not-a-date' })],
+  process: goldProc({ criticality: 'medium' }), target: 'OrgGold',
+  expect: { filterKey: 'sandbox', status: 'pass', reasonExcludes: 'NaN' }
 });
 
 // ============================================================
@@ -1262,6 +1280,10 @@ for (const sc of scenarios) {
     else if (f.status !== sc.expect.status) {
       ok = false;
       diag = `filtro "${sc.expect.filterKey}" esperado=${sc.expect.status}, obtido=${f.status}. Razão: ${f.reason}`;
+    }
+    else if (sc.expect.reasonExcludes && f.reason && f.reason.includes(sc.expect.reasonExcludes)) {
+      ok = false;
+      diag = `filtro "${sc.expect.filterKey}" razão não deveria conter "${sc.expect.reasonExcludes}": ${f.reason}`;
     }
   }
 

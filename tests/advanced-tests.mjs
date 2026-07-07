@@ -209,6 +209,76 @@ console.log('\n== Nova org como recomendação explícita ==');
     `recommendation=${view6.recommendation}`);
 }
 
+// ============================================================
+// #B Recomendações de landscape restantes (consolidate-first, no-viable-option)
+// ============================================================
+console.log('\n== Recomendações de landscape (consolidate-first / no-viable-option) ==');
+{
+  // consolidate-first: duas orgs do MESMO perfil (regulator+controller+model), ambas
+  // FAIL no mesmo requisito (Pub/Sub API requerido e ausente) mas com capacidade folgada
+  // e sem nenhum critério de new-org → engine deve sugerir consolidar antes de alocar.
+  const proc = goldProc({ requiresPubSubApi: 'true' });
+  const orgs = [
+    goldOrg({ orgName: 'OrgA', pubSubApiEnabled: false }),
+    goldOrg({ orgName: 'OrgB', pubSubApiEnabled: false })
+  ].map(o => normalizeOrgMetadata(o, o.orgName));
+  const evals = orgs.map(o => evaluateOrgForProcess(o, proc, orgs.map(x => x.orgName)));
+  const view = analyzeLandscape(evals, proc);
+  ok('duas orgs mesmo perfil, todas fail, cap folgada → consolidate-first',
+    view.recommendation === 'consolidate-first' && Array.isArray(view.primaryChoice) && view.primaryChoice.length === 2,
+    `recommendation=${view.recommendation} primaryChoice=${JSON.stringify(view.primaryChoice)}`);
+  ok('consolidate-first: 0 orgs passing',
+    evals.filter(e => e.overall === 'pass').length === 0);
+
+  // no-viable-option: uma org com hard/soft fail que NÃO dispara critério new-org
+  // (regulator/controller/model iguais aos do processo) e sem par p/ consolidar.
+  const proc2 = goldProc();
+  const orgs2 = [goldOrg({ orgName: 'OrgX', storagePct: 95 })].map(o => normalizeOrgMetadata(o, 'x'));
+  const evals2 = orgs2.map(o => evaluateOrgForProcess(o, proc2, ['OrgX']));
+  const view2 = analyzeLandscape(evals2, proc2);
+  ok('org única com fail e sem critério new-org → no-viable-option',
+    view2.recommendation === 'no-viable-option' && view2.newOrgRationale.length === 0,
+    `recommendation=${view2.recommendation} newOrg=${JSON.stringify(view2.newOrgRationale)}`);
+}
+
+// ============================================================
+// #C Ranking multi-org — ordem pass > warn > fail, desempate por score
+// ============================================================
+console.log('\n== Ranking multi-org (pass > warn > fail, desempate por score) ==');
+{
+  const proc = goldProc();
+  const rank = { pass: 0, warn: 1, fail: 2 };
+  const sortEvals = evals => [...evals].sort((a, b) =>
+    rank[a.overall] !== rank[b.overall] ? rank[a.overall] - rank[b.overall] : b.score - a.score);
+
+  // 3 orgs: uma pass limpa, uma warn (docScore baixo), uma fail (storage crítico)
+  const orgs = [
+    goldOrg({ orgName: 'OrgFail', storagePct: 95 }),
+    goldOrg({ orgName: 'OrgWarn', documentationScore: 50 }),
+    goldOrg({ orgName: 'OrgPass' })
+  ].map(o => normalizeOrgMetadata(o, o.orgName));
+  const evals = orgs.map(o => evaluateOrgForProcess(o, proc, orgs.map(x => x.orgName)));
+  const sorted = sortEvals(evals);
+  ok('ranking ordena pass > warn > fail',
+    sorted[0].org.orgName === 'OrgPass' && sorted[1].org.orgName === 'OrgWarn' && sorted[2].org.orgName === 'OrgFail',
+    `ordem=${sorted.map(e => e.org.orgName + ':' + e.overall).join(', ')}`);
+  const view = analyzeLandscape(evals, proc);
+  ok('recomendação reuse aponta a org pass como primaryChoice',
+    view.recommendation === 'reuse' && view.primaryChoice === 'OrgPass',
+    `rec=${view.recommendation} primary=${view.primaryChoice}`);
+
+  // desempate: duas orgs ambas warn, uma com mais warns (score menor) → a de menos warns primeiro
+  const orgsTie = [
+    goldOrg({ orgName: 'OrgManyWarn', documentationScore: 50, incidentsLast12mo: 3, teamUtilizationPct: 80 }),
+    goldOrg({ orgName: 'OrgFewWarn', documentationScore: 50 })
+  ].map(o => normalizeOrgMetadata(o, o.orgName));
+  const evalsTie = orgsTie.map(o => evaluateOrgForProcess(o, proc, orgsTie.map(x => x.orgName)));
+  const sortedTie = sortEvals(evalsTie);
+  ok('empate no overall (warn) → desempata por score (menos warns primeiro)',
+    sortedTie[0].org.orgName === 'OrgFewWarn' && sortedTie[0].score > sortedTie[1].score,
+    `ordem=${sortedTie.map(e => e.org.orgName + ':' + e.overall + '(' + e.score + ')').join(', ')}`);
+}
+
 console.log('');
 console.log(`${passed}/${passed+failed} checks passaram, ${failed} falharam.`);
 if (failed > 0) process.exit(1);

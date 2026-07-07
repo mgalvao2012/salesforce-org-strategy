@@ -506,7 +506,7 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   } else if (procCriticality === 'critical' && fullCopy === 0) {
     sbxStatus = 'fail';
     sbxReason = t('engine.filter.sandbox.criticalNoFullCopy');
-  } else if (lastRefresh) {
+  } else if (lastRefresh && !Number.isNaN(new Date(lastRefresh).getTime())) {
     const refresh = new Date(lastRefresh);
     // Data de referência injetável (proc.evaluationDate) para determinismo em testes;
     // em produção usa a data corrente. Antes era hardcoded '2026-07-06' e apodrecia.
