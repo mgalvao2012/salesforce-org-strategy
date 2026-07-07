@@ -102,11 +102,10 @@ The language is auto-detected from `navigator.language` (falls back to pt-BR) an
 3. **Describe the new process** — fill in the form (applicable regulator, LGPD controller, LOB, desired release cadence, use of Person Account/Multi-Currency, required Salesforce features, storage/API/object/field/class projections, ApexGuru capacity headroom, CDC/PE contracts, external feeds, vendors, required backup, etc.).
 4. Click **Run allocation**.
 5. For each loaded org, the engine generates:
-   - Final score (0-100)
+   - An aggregate verdict (`pass` / `warn` / `fail`) and a relative ranking score (see [How the engine decides](#how-the-engine-decides) — not a 0–100 percentage)
    - Filter chain (~45) with **PASS** / **WARN** / **FAIL** verdicts and textual justification per filter
-   - Recommendation: **Allocate here**, **Allocate with caveats**, **Do not allocate**
-   - If no org passes: **New org justified** with rationale (which filters failed on which orgs).
-6. Alternatives (side cards) show trade-offs among the top-3 orgs by score.
+   - A landscape-level recommendation: **Allocate here** (reuse), **Allocate with caveats** (reuse-with-warnings), **Consolidate first**, **New org justified**, or **No viable option**.
+6. Alternatives (side cards) show trade-offs among the top-3 ranked orgs.
 
 Ready-made examples to test: [samples/OrgAsset.json](samples/OrgAsset.json), [samples/OrgCorporativa.json](samples/OrgCorporativa.json), [samples/OrgVarejoPF.json](samples/OrgVarejoPF.json).
 
@@ -139,14 +138,14 @@ Repeat per org. Upload every JSON in the Allocation screen (multi-select).
 
 ## Tests
 
-Full unit test suite for the allocation engine (145 cases covering each filter with `pass`/`warn`/`fail` scenarios):
+Full unit test suite for the allocation engine (151 cases covering each filter with `pass`/`warn`/`fail` scenarios, including the unmeasured-vs-zero distinction):
 
 ```bash
-node tests/allocation-tests.mjs        # 145 asserts on the engine
-node tests/advanced-tests.mjs          # 15 combinatorial scenarios (cascade, overrides)
-node tests/coverage-check.mjs          # verifies filter coverage
+node tests/allocation-tests.mjs        # 151 asserts on the engine
+node tests/advanced-tests.mjs          # 17 combinatorial scenarios (cascade, overrides, landscape)
+node tests/coverage-check.mjs          # verifies field coverage (form ↔ engine)
 node tests/effectiveness-check.mjs     # sanity check on the 3 samples
-node tests/samples-coverage.mjs        # verifies samples exercise every filter
+node tests/samples-coverage.mjs        # verifies samples exercise every field
 ```
 
 There is no test framework — asserts are plain JS with `console.assert` + readable output.
@@ -191,8 +190,8 @@ To add a new language:
 │   ├── OrgCorporativa.json                      # Legacy corporate org
 │   └── OrgVarejoPF.json                         # Retail Person Account org
 └── tests/
-    ├── allocation-tests.mjs                     # 145 asserts across filters
-    ├── advanced-tests.mjs                       # 15 combinatorial scenarios
+    ├── allocation-tests.mjs                     # 151 asserts across filters
+    ├── advanced-tests.mjs                       # 17 combinatorial scenarios
     ├── coverage-check.mjs
     ├── effectiveness-check.mjs
     └── samples-coverage.mjs
@@ -204,18 +203,24 @@ To add a new language:
 
 **Topology** — weighted score. Each answer adds points to `single` or `multi`. Critical overrides (distinct regulator, distinct LGPD controller, active M&A) force Multi. When Multi, a second score inside the Hub-vs-Federated block decides the flavor.
 
-**Allocation** — filter pipeline per org:
+**Allocation** — each org runs through the ~45-filter pipeline (`evaluateOrgForProcess`). Every filter returns one of three verdicts:
 
-1. **HARD FAILS** (incompatible regulator, conflicting LGPD controller, declared incompatible LOB, missing feature with no workaround, incompatible package, sunset)
-2. **SOFT FAILS** (projection exceeds limits, incompatible cadence, insufficient capacity headroom, degrading health, saturated ApexGuru)
-3. **WARNS** (missing data, LOB divergent with override allowed, feature via workaround, expiring contracts, low docScore, backup below desired)
-4. **PASS** with positive metrics
+- **FAIL** — hard or soft blocker (incompatible regulator, conflicting LGPD controller, missing irreversible feature, projection over limits, saturated capacity, degrading health, SLA miss, budget overrun, …)
+- **WARN** — unmeasured data, mitigable divergence, feature via workaround, expiring contracts, low docScore, backup below desired, …
+- **PASS** — requirement met with positive metrics
 
-Final score = 100 - Σ(per-filter penalties). Recommendation:
-- Score ≥ 80 and 0 fails → **Allocate here**
-- 60 ≤ score < 80 or soft fails → **Allocate with caveats**
-- Score < 60 or hard fail → **Do not allocate**
-- All orgs FAIL → **New org justified** (with aggregated rationale)
+Two numbers come out of the per-org run:
+
+- **`overall`** = `fail` if any filter fails, else `warn` if any warns, else `pass`. A single FAIL drops the org to `fail` regardless of how many passes it has. `overall` ignores process criticality.
+- **`score`** = Σ per-filter points: **PASS +3, WARN +1, FAIL −2**, where only the FAIL side is scaled by process criticality (`critical` ×3, `high` ×2, `medium` ×1, `low` ×0.5). It is **not** normalized to 0–100 — it is a relative ranking number, not a percentage. Orgs are ranked first by `overall` (pass > warn > fail), then by `score` descending.
+
+The final recommendation is decided at the **landscape** level (`analyzeLandscape`), across all orgs — not by a per-org score threshold. The branches are evaluated in this order (first match wins):
+
+1. **`new-org`** ("New org justified") — a positive criterion holds *and* no org passes: unseen regulator across the landscape, distinct data controller, unseen Person Account, or a critical process with no viable candidate. Never overrides an org that passes every filter.
+2. **`consolidate-first`** — no org passes, but two same-profile orgs with measured, combined headroom could be merged first.
+3. **`reuse`** ("Allocate here") — at least one org has `overall === 'pass'`; the top-ranked one is the primary choice.
+4. **`reuse-with-warnings`** ("Allocate with caveats") — no org passes clean, but at least one is `warn`.
+5. **`no-viable-option`** — everything has hard blockers; exhaust technical alternatives (Data Cloud, 2GP, Experience Cloud, MuleSoft, shared services) before creating an org.
 
 Details of each filter live in [allocation-engine.mjs](allocation-engine.mjs) and the strings in [i18n/pt-BR.mjs](i18n/pt-BR.mjs) under the `engine.filter.*` prefix.
 
