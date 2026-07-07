@@ -1495,9 +1495,17 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
 //   - rebalancing: dicas de load rebalancing (quota alta vs. folga)
 //   - newOrgRationale: critério positivo para nova org (quando aplicável)
 export function analyzeLandscape(evaluations, proc) {
-  const passing = evaluations.filter(e => e.overall === 'pass');
-  const warning = evaluations.filter(e => e.overall === 'warn');
-  const failing = evaluations.filter(e => e.overall === 'fail');
+  // Ordena internamente (pass > warn > fail, depois score desc) para não depender de
+  // o caller ter ordenado antes. primaryChoice usa passing[0]/warning[0], então sem
+  // este sort a recomendação apontaria a primeira org do array, não a de maior score.
+  const rank = { pass: 0, warn: 1, fail: 2 };
+  const ranked = [...evaluations].sort((a, b) => {
+    if (rank[a.overall] !== rank[b.overall]) return rank[a.overall] - rank[b.overall];
+    return b.score - a.score;
+  });
+  const passing = ranked.filter(e => e.overall === 'pass');
+  const warning = ranked.filter(e => e.overall === 'warn');
+  const failing = ranked.filter(e => e.overall === 'fail');
 
   // 1. Consolidation opportunities — mesma "familia" (regulator + dataController + dataModel)
   //    e ambas com capacidade folgada. Se existe par assim, sugere consolidar antes de alocar.

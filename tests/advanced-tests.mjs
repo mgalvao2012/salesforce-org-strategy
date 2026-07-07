@@ -277,6 +277,22 @@ console.log('\n== Ranking multi-org (pass > warn > fail, desempate por score) ==
   ok('empate no overall (warn) → desempata por score (menos warns primeiro)',
     sortedTie[0].org.orgName === 'OrgFewWarn' && sortedTie[0].score > sortedTie[1].score,
     `ordem=${sortedTie.map(e => e.org.orgName + ':' + e.overall + '(' + e.score + ')').join(', ')}`);
+
+  // analyzeLandscape deve ordenar internamente, sem confiar no caller: quando há duas orgs
+  // no bucket vencedor, o primaryChoice tem de ser a de maior score mesmo que ela venha por
+  // último no array. Antes do sort interno, a função pegava warning[0] = 1a do array.
+  // Duas orgs warn, a de menos warns (maior score) em segundo no array → deve vencer.
+  // storagePct 45 em cada → combinado 90% impede consolidate-first (soma > 80), mas 45%
+  // ainda é pass no filtro de capacidade (< 70). docScore 50 mantém overall = warn.
+  const twoWarn = [
+    goldOrg({ orgName: 'OrgManyWarn2', storagePct: 45, documentationScore: 50, incidentsLast12mo: 3, teamUtilizationPct: 80 }),
+    goldOrg({ orgName: 'OrgFewWarn2', storagePct: 45, documentationScore: 50 })
+  ].map(o => normalizeOrgMetadata(o, o.orgName));
+  const evalsTwoWarn = twoWarn.map(o => evaluateOrgForProcess(o, proc, twoWarn.map(x => x.orgName)));
+  const viewTwoWarn = analyzeLandscape(evalsTwoWarn, proc);
+  ok('reuse-with-warnings: primaryChoice é a org de menos warns independente da ordem',
+    viewTwoWarn.recommendation === 'reuse-with-warnings' && viewTwoWarn.primaryChoice === 'OrgFewWarn2',
+    `rec=${viewTwoWarn.recommendation} primary=${viewTwoWarn.primaryChoice}`);
 }
 
 console.log('');
