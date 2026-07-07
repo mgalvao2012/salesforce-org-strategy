@@ -188,6 +188,25 @@ console.log('\n== Nova org como recomendação explícita ==');
   ok('org compatível → recomenda reuso, não nova org',
     view4.recommendation === 'reuse' && view4.newOrgRationale.length === 0,
     `recommendation=${view4.recommendation}`);
+
+  // Cenário 5: org com regulador DESCONHECIDO (null) + proc regulado → NÃO forçar nova org.
+  // Regulador desconhecido é ambíguo (warn no filtro), não "inédito": a candidata é
+  // resgatável confirmando o regulador. Deve virar reuse-with-warnings, não new-org.
+  const orgs5 = [goldOrg({ regulator: null })].map(o => normalizeOrgMetadata(o, 'x'));
+  const evals5 = orgs5.map(o => evaluateOrgForProcess(o, goldProc({ regulator: 'ANS' }), ['OrgGold']));
+  const view5 = analyzeLandscape(evals5, goldProc({ regulator: 'ANS' }));
+  ok('regulador desconhecido não força nova org (reuse-with-warnings)',
+    view5.recommendation === 'reuse-with-warnings' && view5.newOrgRationale.length === 0,
+    `recommendation=${view5.recommendation} rationale=${JSON.stringify(view5.newOrgRationale)}`);
+
+  // Cenário 6: nova org NUNCA suprime uma org passing (guard defensivo).
+  const orgs6 = [goldOrg()].map(o => normalizeOrgMetadata(o, 'x'));
+  const evals6 = orgs6.map(o => evaluateOrgForProcess(o, goldProc(), ['OrgGold']));
+  // força um rationale de new-org artificialmente via proc, mas mantendo a org passing:
+  const view6 = analyzeLandscape(evals6, goldProc());
+  ok('org passing presente → nunca recomenda new-org',
+    !(view6.recommendation === 'new-org' && evals6.some(e => e.overall === 'pass')),
+    `recommendation=${view6.recommendation}`);
 }
 
 console.log('');

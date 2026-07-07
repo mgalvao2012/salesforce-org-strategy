@@ -1528,9 +1528,13 @@ export function analyzeLandscape(evaluations, proc) {
   //      D. Isolamento explícito (M&A, JV, subsidiária com controller diferente)
   const newOrgRationale = [];
   const anyOrgSameRegulator = orgs.some(o => o.regulator === proc.regulator);
-  const anyOrgSameController = orgs.some(o => o.dataControllerLGPD && proc.dataController === 'SAME');
+  // Org com regulador desconhecido (null) é ambígua: pode ser a casa certa depois de
+  // confirmar o regulador. Não é "inédito" — o filtro a marca como warn, não fail.
+  // Nesse caso a recomendação correta é reuse-with-warnings ("confirme o regulador"),
+  // não forçar nova org.
+  const anyOrgUnknownRegulator = orgs.some(o => !o.regulator);
   const procCrit = (proc.criticality || 'medium').toLowerCase();
-  if (proc.regulator && proc.regulator !== 'NONE' && !anyOrgSameRegulator) {
+  if (proc.regulator && proc.regulator !== 'NONE' && !anyOrgSameRegulator && !anyOrgUnknownRegulator) {
     newOrgRationale.push({
       criterion: t('engine.newOrg.criterion.regulatorInedito'),
       detail: t('engine.newOrg.detail.regulatorInedito', { reg: proc.regulator })
@@ -1556,8 +1560,12 @@ export function analyzeLandscape(evaluations, proc) {
   }
 
   // 4. Recomendação síntese
+  //    Guard: nova org nunca suprime uma org que passa em todos os filtros. Os critérios
+  //    de newOrgRationale correspondem a hard fails (regulator mismatch, controller distinto,
+  //    personAccount inédito), então na prática passing já é 0 quando disparam — mas o guard
+  //    torna a invariante explícita e à prova de critérios futuros mais frouxos.
   let recommendation, primaryChoice, summary;
-  if (newOrgRationale.length > 0) {
+  if (newOrgRationale.length > 0 && passing.length === 0) {
     recommendation = 'new-org';
     primaryChoice = null;
     summary = t('engine.landscape.summary.newOrg', { criteria: newOrgRationale.map(r => r.criterion).join(', ') });
