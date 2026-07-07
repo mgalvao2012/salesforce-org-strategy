@@ -38,7 +38,9 @@ const proc = {
   publishesEvents: 'OnboardingCompletedEvent:8000',
   consumesEvents: 'AccountCDC, CustomerLifecycleEvent',
   requiresCdc: 'Account, Contact',
-  requiresPubSubApi: 'true'
+  requiresPubSubApi: 'true',
+  // Data de referência fixa p/ filtro sandbox (staleRefresh) ser determinístico.
+  evaluationDate: '2026-07-06'
 };
 
 const knownNames = orgs.map(o => o.orgName);

@@ -488,7 +488,9 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     sbxReason = t('engine.filter.sandbox.criticalNoFullCopy');
   } else if (lastRefresh) {
     const refresh = new Date(lastRefresh);
-    const now = new Date('2026-07-06');
+    // Data de referência injetável (proc.evaluationDate) para determinismo em testes;
+    // em produção usa a data corrente. Antes era hardcoded '2026-07-06' e apodrecia.
+    const now = proc.evaluationDate ? new Date(proc.evaluationDate) : new Date();
     const days = Math.floor((now - refresh) / (1000 * 60 * 60 * 24));
     if (days > 180) {
       sbxStatus = 'warn';

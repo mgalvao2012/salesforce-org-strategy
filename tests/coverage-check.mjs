@@ -25,12 +25,17 @@ const procFieldsInEngine = new Set();
 const procRe = /\bproc\.([A-Za-z0-9_]+)\b/g;
 while ((m = procRe.exec(engineSrc)) != null) procFieldsInEngine.add(m[1]);
 
-// Extrai fields do form (processSections)
-const sectionsMatch = htmlSrc.match(/const processSections = \[[\s\S]*?\];\s*\nconst processFields/);
+// Extrai fields do form (processSections). O form é montado por buildProcessSections(),
+// que retorna o array de seções — cada field declara `id: '...'`.
+const sectionsMatch = htmlSrc.match(/function buildProcessSections\(\)\s*\{\s*return \[[\s\S]*?\n  \];\s*\n\}/);
 const procFieldsInForm = new Set();
 if (sectionsMatch) {
   const idRe = /id:\s*'([A-Za-z0-9_]+)'/g;
   while ((m = idRe.exec(sectionsMatch[0])) != null) procFieldsInForm.add(m[1]);
+}
+if (procFieldsInForm.size === 0) {
+  console.error('ERRO: não consegui extrair campos de buildProcessSections() do HTML — o regex de parsing quebrou (refactor?). Corrija coverage-check.mjs antes de confiar no resultado.');
+  process.exit(2);
 }
 
 // Verifica quais org fields o motor consome via `org.<field>`.
@@ -70,8 +75,11 @@ const procMissing = [...procFieldsInEngine].filter(f => {
   if (f === 'requiredPackageVersions') return !procFieldsInForm.has('requiredPackageVersionsJson') && !procFieldsInForm.has('requiredPackageVersions');
   return !procFieldsInForm.has(f);
 });
-// Filtra os que são obviamente internos (nada com _ ou de estrutura)
-const noisy = procMissing.filter(f => !['length'].includes(f));
+// Filtra os que são obviamente internos (estrutura JS ou controle de teste, não campos de form).
+// evaluationDate: data de referência injetável do filtro sandbox — default new Date() em produção,
+// fixada só por testes p/ determinismo; não é preenchida pelo usuário no form.
+const engineInternal = ['length', 'evaluationDate'];
+const noisy = procMissing.filter(f => !engineInternal.includes(f));
 if (noisy.length === 0) console.log('  ✓ nenhum órfão');
 else noisy.forEach(f => console.log('  ✗ ' + f));
 

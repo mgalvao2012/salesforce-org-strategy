@@ -58,7 +58,9 @@ function goldProc(overrides = {}) {
     requiresDataMasking: 'false', requiredLanguages: '', requiredPackageVersions: {},
     requiredFieldHistoryMonths: '0', requiresBigObjects: 'false', requiresConsentFramework: 'false',
     hasHighConsumption: 'false', requiresCoordinatedSandbox: 'false', dependsOnVendorContracts: '',
-    requiresCanaryRelease: 'false'
+    requiresCanaryRelease: 'false',
+    // Data de referência fixa p/ filtro sandbox (staleRefresh) ser determinístico.
+    evaluationDate: '2026-07-06'
   }, overrides);
 }
 
