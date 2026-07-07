@@ -2,6 +2,8 @@
 // Funções puras, exportadas como ES Module. Sem dependência de DOM ou de estado global.
 // Usado tanto pelo HTML (via <script type="module">) quanto pelo test harness (via import).
 
+import { t } from './i18n.mjs';
+
 function compareVersion(a, b) {
   const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
   const pb = String(b).split('.').map(n => parseInt(n, 10) || 0);
@@ -186,45 +188,45 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let regStatus = 'pass', regReason = '';
   if (procRegulator === 'NONE') {
     regStatus = 'pass';
-    regReason = 'Processo não regulado — nenhuma restrição de perímetro.';
+    regReason = t('engine.filter.regulator.notRegulated');
   } else if (orgRegulator === 'unknown') {
     regStatus = 'warn';
-    regReason = 'Perímetro regulatório da org não declarado. Levantar com Compliance antes de decidir.';
+    regReason = t('engine.filter.regulator.unknownOrg');
   } else if (orgRegulator === procRegulator) {
     regStatus = 'pass';
-    regReason = `Mesmo regulador (${procRegulator}) — perímetro compatível.`;
+    regReason = t('engine.filter.regulator.match', { reg: procRegulator });
   } else {
     regStatus = 'fail';
-    regReason = `Regulador incompatível: processo=${procRegulator}, org=${orgRegulator}. Isolamento regulatório inviabiliza reuso.`;
+    regReason = t('engine.filter.regulator.mismatch', { proc: procRegulator, org: orgRegulator });
   }
-  filters.push({ key: 'regulator', label: 'Perímetro regulatório', status: regStatus, reason: regReason });
+  filters.push({ key: 'regulator', label: t('engine.filter.regulator.label'), status: regStatus, reason: regReason });
 
   // Filtro 1b: data controller LGPD
   const dc = proc.dataController;
   let dcStatus = 'pass', dcReason = '';
-  if (dc === 'SAME') { dcStatus = 'pass'; dcReason = 'Mesmo data controller — reuso permitido.'; }
-  else if (dc === 'DIFFERENT') { dcStatus = 'fail'; dcReason = 'Data controller distinto — sem contrato inter-partes, reuso viola LGPD.'; }
-  else { dcStatus = 'warn'; dcReason = 'Data controller a definir — bloqueador se resultar distinto sem contrato.'; }
-  filters.push({ key: 'dataController', label: 'Data controller LGPD', status: dcStatus, reason: dcReason });
+  if (dc === 'SAME') { dcStatus = 'pass'; dcReason = t('engine.filter.dataController.same'); }
+  else if (dc === 'DIFFERENT') { dcStatus = 'fail'; dcReason = t('engine.filter.dataController.different'); }
+  else { dcStatus = 'warn'; dcReason = t('engine.filter.dataController.toDefine'); }
+  filters.push({ key: 'dataController', label: t('engine.filter.dataController.label'), status: dcStatus, reason: dcReason });
 
   // Filtro 2: data model
   let dmStatus = 'pass', dmReason = '';
   if (proc.dataModel === 'personAccount') {
-    if (org.hasPersonAccount) { dmStatus = 'pass'; dmReason = 'Person Account habilitado na org.'; }
-    else { dmStatus = 'fail'; dmReason = 'Processo exige Person Account, org não tem (feature irreversível).'; }
+    if (org.hasPersonAccount) { dmStatus = 'pass'; dmReason = t('engine.filter.dataModel.personAccount.ok'); }
+    else { dmStatus = 'fail'; dmReason = t('engine.filter.dataModel.personAccount.missing'); }
   } else if (proc.dataModel === 'fsc') {
-    if (org.dataModel === 'fsc') { dmStatus = 'pass'; dmReason = 'Org já é FSC.'; }
-    else { dmStatus = 'fail'; dmReason = 'Processo exige Financial Services Cloud — org não é FSC.'; }
+    if (org.dataModel === 'fsc') { dmStatus = 'pass'; dmReason = t('engine.filter.dataModel.fsc.ok'); }
+    else { dmStatus = 'fail'; dmReason = t('engine.filter.dataModel.fsc.missing'); }
   } else if (proc.dataModel === 'b2b') {
-    if (org.hasPersonAccount) { dmStatus = 'warn'; dmReason = 'Org tem Person Account habilitado; B2B convive mas com atenção a page layouts.'; }
-    else { dmStatus = 'pass'; dmReason = 'Data model B2B padrão compatível.'; }
+    if (org.hasPersonAccount) { dmStatus = 'warn'; dmReason = t('engine.filter.dataModel.b2b.warnPersonAccount'); }
+    else { dmStatus = 'pass'; dmReason = t('engine.filter.dataModel.b2b.ok'); }
   } else if (['healthcloud','nonprofit','education','manufacturing'].includes(proc.dataModel)) {
-    if (org.dataModel === proc.dataModel) { dmStatus = 'pass'; dmReason = `Org já opera como ${proc.dataModel}.`; }
-    else { dmStatus = 'fail'; dmReason = `Processo exige industry cloud ${proc.dataModel} — org opera como ${org.dataModel || 'b2b padrão'}.`; }
+    if (org.dataModel === proc.dataModel) { dmStatus = 'pass'; dmReason = t('engine.filter.dataModel.industry.ok', { model: proc.dataModel }); }
+    else { dmStatus = 'fail'; dmReason = t('engine.filter.dataModel.industry.missing', { procModel: proc.dataModel, orgModel: org.dataModel || t('engine.filter.dataModel.industry.defaultB2B') }); }
   } else {
-    dmStatus = 'warn'; dmReason = 'Data model custom/híbrido — avaliar manualmente.';
+    dmStatus = 'warn'; dmReason = t('engine.filter.dataModel.custom');
   }
-  filters.push({ key: 'dataModel', label: 'Data model', status: dmStatus, reason: dmReason });
+  filters.push({ key: 'dataModel', label: t('engine.filter.dataModel.label'), status: dmStatus, reason: dmReason });
 
   // Filtro 2b: features especiais
   const featureMap = {
@@ -240,13 +242,14 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let featStatus, featReason;
   if (missing.length === 0) {
     featStatus = 'pass';
-    featReason = (proc.features || []).length ? 'Todas as features exigidas ativas na org.' : 'Nenhuma feature especial exigida.';
+    featReason = (proc.features || []).length ? t('engine.filter.features.allActive') : t('engine.filter.features.noneRequired');
   } else {
     const critical = missing.filter(f => f === 'multiCurrency');
     featStatus = critical.length ? 'fail' : 'warn';
-    featReason = `Features não habilitadas: ${missing.map(f => featureMap[f][1]).join(', ')}${critical.length ? ' (Multi-Currency é irreversível)' : ' (ativação exige SKU + rollout)'}.`;
+    const suffix = critical.length ? t('engine.filter.features.missing.suffixIrreversible') : t('engine.filter.features.missing.suffixSku');
+    featReason = t('engine.filter.features.missing', { list: missing.map(f => featureMap[f][1]).join(', '), suffix });
   }
-  filters.push({ key: 'features', label: 'Features especiais', status: featStatus, reason: featReason });
+  filters.push({ key: 'features', label: t('engine.filter.features.label'), status: featStatus, reason: featReason });
 
   // Filtro 3: capacidade técnica atual
   const objLimitPct = org.customObjectLimitPct || Math.round(org.customObjectCount / 30);
@@ -254,16 +257,16 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   const apiPct = org.apiUsagePct || 0;
   const maxPct = Math.max(objLimitPct, storagePct, apiPct);
   let capStatus, capReason;
-  if (maxPct >= 85) { capStatus = 'fail'; capReason = `Capacidade crítica (${maxPct}%): custom objects ${objLimitPct}% · storage ${storagePct}% · API ${apiPct}%.`; }
-  else if (maxPct >= 70) { capStatus = 'warn'; capReason = `Capacidade apertada (${maxPct}%): resolver folga antes.`; }
-  else { capStatus = 'pass'; capReason = `Folga confortável (max ${maxPct}%): custom objects ${objLimitPct}% · storage ${storagePct}% · API ${apiPct}%.`; }
-  filters.push({ key: 'capacity', label: 'Capacidade técnica', status: capStatus, reason: capReason });
+  if (maxPct >= 85) { capStatus = 'fail'; capReason = t('engine.filter.capacity.critical', { max: maxPct, obj: objLimitPct, storage: storagePct, api: apiPct }); }
+  else if (maxPct >= 70) { capStatus = 'warn'; capReason = t('engine.filter.capacity.tight', { max: maxPct }); }
+  else { capStatus = 'pass'; capReason = t('engine.filter.capacity.ok', { max: maxPct, obj: objLimitPct, storage: storagePct, api: apiPct }); }
+  filters.push({ key: 'capacity', label: t('engine.filter.capacity.label'), status: capStatus, reason: capReason });
 
   // Filtro 3b: saúde operacional (ApexGuru)
   let healthStatus, healthReason;
   if (!org.apexGuruAvailable) {
     healthStatus = 'warn';
-    healthReason = 'Sem dados de ApexGuru. Extraia insights via Setup (Signature Success Plan) — folga técnica pode esconder débito.';
+    healthReason = t('engine.filter.health.noData');
   } else {
     const crit = org.apexGuruCriticalIssues || 0;
     const soql = org.apexGuruSoqlNonSelective || 0;
@@ -271,27 +274,27 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     const govExc = org.apexGuruGovernorExceptions || 0;
     const trend = org.apexGuruTrend;
     const facts = [];
-    if (crit) facts.push(`${crit} issues críticos`);
-    if (soql) facts.push(`${soql} SOQL não-seletivo`);
-    if (longApex) facts.push(`${longApex} long-running Apex`);
-    if (govExc) facts.push(`${govExc} governor exceptions`);
-    const factStr = facts.join(', ') || 'sem issues';
-    const trendLabel = trend ? ` · trend ${trend}` : '';
+    if (crit) facts.push(t('engine.filter.health.fact.critical', { n: crit }));
+    if (soql) facts.push(t('engine.filter.health.fact.soql', { n: soql }));
+    if (longApex) facts.push(t('engine.filter.health.fact.longApex', { n: longApex }));
+    if (govExc) facts.push(t('engine.filter.health.fact.governor', { n: govExc }));
+    const factStr = facts.join(', ') || t('engine.filter.health.fact.none');
+    const trendLabel = trend ? t('engine.filter.health.trendLabel', { trend }) : '';
     if (crit > 30 || govExc > 20 || trend === 'degrading') {
       healthStatus = 'fail';
-      healthReason = `Saúde crítica: ${factStr}${trendLabel}. Refactor obrigatório antes.`;
+      healthReason = t('engine.filter.health.critical', { facts: factStr, trend: trendLabel });
     } else if (crit >= 10 || soql >= 5 || longApex >= 5 || trend === 'stable-on-debt') {
       healthStatus = 'warn';
-      healthReason = `Saúde apertada: ${factStr}${trendLabel}. Priorize refactor dos top offenders.`;
+      healthReason = t('engine.filter.health.tight', { facts: factStr, trend: trendLabel });
     } else {
       healthStatus = 'pass';
-      healthReason = `Saúde operacional confortável: ${factStr}${trendLabel}.`;
+      healthReason = t('engine.filter.health.ok', { facts: factStr, trend: trendLabel });
     }
     if (org.apexGuruTopOffenders && org.apexGuruTopOffenders.length) {
-      healthReason += ` Top offenders: ${org.apexGuruTopOffenders.slice(0, 5).join(', ')}.`;
+      healthReason += ' ' + t('engine.filter.health.topOffenders', { list: org.apexGuruTopOffenders.slice(0, 5).join(', ') });
     }
   }
-  filters.push({ key: 'health', label: 'Saúde operacional (ApexGuru)', status: healthStatus, reason: healthReason });
+  filters.push({ key: 'health', label: t('engine.filter.health.label'), status: healthStatus, reason: healthReason });
 
   // Filtro 4: cadência
   const cadenceOrder = { weekly: 1, biweekly: 2, monthly: 3, quarterly: 4 };
@@ -299,19 +302,19 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   const orgCad = cadenceOrder[org.releaseSchedule] || 999;
   let cadStatus, cadReason;
   if (org.releaseSchedule === 'unknown') {
-    cadStatus = 'warn'; cadReason = 'Cadência de release da org não declarada.';
+    cadStatus = 'warn'; cadReason = t('engine.filter.cadence.unknown');
   } else if (procCad >= orgCad) {
-    cadStatus = 'pass'; cadReason = `Cadência (${proc.cadence}) cabe na janela da org (${org.releaseSchedule}).`;
+    cadStatus = 'pass'; cadReason = t('engine.filter.cadence.fits', { proc: proc.cadence, org: org.releaseSchedule });
   } else if (org.package2Count > 0) {
-    cadStatus = 'warn'; cadReason = `Processo exige mais frequência (${proc.cadence}) que a org (${org.releaseSchedule}), mas 2GP em uso (${org.package2Count} packages).`;
+    cadStatus = 'warn'; cadReason = t('engine.filter.cadence.warn2gp', { proc: proc.cadence, org: org.releaseSchedule, pkg: org.package2Count });
   } else {
-    cadStatus = 'fail'; cadReason = `Cadência incompatível: processo=${proc.cadence}, org=${org.releaseSchedule}. Sem 2GP, releases vão se bloquear.`;
+    cadStatus = 'fail'; cadReason = t('engine.filter.cadence.mismatch', { proc: proc.cadence, org: org.releaseSchedule });
   }
-  filters.push({ key: 'cadence', label: 'Cadência de release', status: cadStatus, reason: cadReason });
+  filters.push({ key: 'cadence', label: t('engine.filter.cadence.label'), status: cadStatus, reason: cadReason });
 
   // Filtro 5: Integrações inter-org
   const procIntegrates = (proc.integratesWithOrgs || '').split(',').map(s => s.trim()).filter(Boolean);
-  let intStatus = 'pass', intReason = 'Sem dependência de outras orgs declarada.';
+  let intStatus = 'pass', intReason = t('engine.filter.integrations.none');
   if (procIntegrates.length > 0) {
     const known = new Set(knownOrgNames);
     const missingOrgs = procIntegrates.filter(n => !known.has(n));
@@ -319,17 +322,17 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     const published = new Set(org.publishedContracts || []);
     if (missingOrgs.length === procIntegrates.length) {
       intStatus = 'warn';
-      intReason = `Processo integra com ${procIntegrates.join(', ')}, mas nenhuma dessas orgs foi carregada no inventário — validar contratos manualmente.`;
+      intReason = t('engine.filter.integrations.notInInventory', { list: procIntegrates.join(', ') });
     } else if (published.size === 0 && consumed.size === 0) {
       intStatus = 'warn';
-      intReason = `Processo declara integração com ${procIntegrates.join(', ')}, mas a org candidata não tem publishedContracts/consumedContracts declarados — pode faltar canal de dados.`;
+      intReason = t('engine.filter.integrations.noContracts', { list: procIntegrates.join(', ') });
     } else {
       const impacted = procIntegrates.filter(n => known.has(n));
       intStatus = 'pass';
-      intReason = `Integração com ${impacted.join(', ')}; org publica ${published.size} contrato(s) e consome ${consumed.size}. Validar payload compatível.`;
+      intReason = t('engine.filter.integrations.ok', { list: impacted.join(', '), published: published.size, consumed: consumed.size });
     }
   }
-  filters.push({ key: 'integrations', label: 'Integrações inter-org', status: intStatus, reason: intReason });
+  filters.push({ key: 'integrations', label: t('engine.filter.integrations.label'), status: intStatus, reason: intReason });
 
   // Filtro 6: Projeção de volume pós-alocação
   const numParse = v => (typeof v === 'string' ? parseInt(v.replace(/[.,\s_]/g, ''), 10) || 0 : (typeof v === 'number' ? v : 0));
@@ -338,7 +341,7 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let projStatus, projReason;
   if (procRecords === 0 && procApiDaily === 0) {
     projStatus = 'warn';
-    projReason = 'Sem estimativa quantitativa (registros/ano e API/dia). Processo não quantificado pode estourar limites sem aviso — colete numbers antes de decidir.';
+    projReason = t('engine.filter.projection.noEstimate');
   } else {
     const storageAdd = Math.round(procRecords / 1000000);
     const apiAddPct = Math.round((procApiDaily / 5000000) * 100);
@@ -347,34 +350,36 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     const maxProj = Math.max(projStorage, projApi);
     if (maxProj >= 90) {
       projStatus = 'fail';
-      projReason = `Pós-alocação estoura limites: storage ${projStorage}% (+${storageAdd}pp), API ${projApi}% (+${apiAddPct}pp).`;
+      projReason = t('engine.filter.projection.overflow', { storage: projStorage, storageAdd, api: projApi, apiAdd: apiAddPct });
     } else if (maxProj >= 75) {
       projStatus = 'warn';
-      projReason = `Pós-alocação fica apertado: storage ${projStorage}%, API ${projApi}%. Planeje expansão antes.`;
+      projReason = t('engine.filter.projection.tight', { storage: projStorage, api: projApi });
     } else {
       projStatus = 'pass';
-      projReason = `Projeção confortável: storage ${projStorage}% (+${storageAdd}pp), API ${projApi}% (+${apiAddPct}pp).`;
+      projReason = t('engine.filter.projection.ok', { storage: projStorage, storageAdd, api: projApi, apiAdd: apiAddPct });
     }
   }
-  filters.push({ key: 'projection', label: 'Projeção de volume', status: projStatus, reason: projReason });
+  filters.push({ key: 'projection', label: t('engine.filter.projection.label'), status: projStatus, reason: projReason });
 
   // Filtro 7: PCI-DSS + SOX
   const procPci = (proc.complianceScope || []).includes('pci');
   const procSox = (proc.complianceScope || []).includes('sox');
-  let compStatus = 'pass', compReason = 'Processo sem requisitos PCI-DSS/SOX específicos.';
+  let compStatus = 'pass', compReason = t('engine.filter.compliance.none');
   if (procPci || procSox || org.pciInScope || org.soxScope) {
     const orgPci = !!org.pciInScope;
     const orgSox = !!org.soxScope;
     const issues = [];
     const failMarkers = [];
     const warnMarkers = [];
-    if (procPci && !orgPci) { issues.push('processo é PCI mas org está fora de scope — alocar contamina a org inteira'); failMarkers.push(true); }
-    if (!procPci && orgPci) { issues.push('org é PCI e processo não é — adicionar código não-PCI amplia scope de auditoria'); warnMarkers.push(true); }
-    if (procSox && !orgSox) { issues.push('processo dispara SOX mas org não está sob controles SOX — implementar antes'); failMarkers.push(true); }
-    if (!procSox && orgSox) { issues.push('org é SOX-controlada; validar que novo processo não introduz brechas de segregation of duties'); warnMarkers.push(true); }
+    if (procPci && !orgPci) { issues.push(t('engine.filter.compliance.issue.procPciOnly')); failMarkers.push(true); }
+    if (!procPci && orgPci) { issues.push(t('engine.filter.compliance.issue.orgPciOnly')); warnMarkers.push(true); }
+    if (procSox && !orgSox) { issues.push(t('engine.filter.compliance.issue.procSoxOnly')); failMarkers.push(true); }
+    if (!procSox && orgSox) { issues.push(t('engine.filter.compliance.issue.orgSoxOnly')); warnMarkers.push(true); }
     if (issues.length === 0) {
       compStatus = 'pass';
-      compReason = `Compliance alinhado: PCI ${orgPci ? 'ambos in-scope' : 'ambos out-of-scope'}${procSox && orgSox ? ' · SOX alinhado' : ''}.`;
+      const pciStatus = orgPci ? t('engine.filter.compliance.aligned.pciBothIn') : t('engine.filter.compliance.aligned.pciBothOut');
+      const soxPart = procSox && orgSox ? t('engine.filter.compliance.aligned.soxSuffix') : '';
+      compReason = t('engine.filter.compliance.aligned', { pci: pciStatus, sox: soxPart });
     } else if (failMarkers.length > 0) {
       compStatus = 'fail';
       compReason = issues.join(' · ');
@@ -383,39 +388,39 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
       compReason = issues.join(' · ');
     }
   }
-  filters.push({ key: 'compliance', label: 'PCI-DSS / SOX scope', status: compStatus, reason: compReason });
+  filters.push({ key: 'compliance', label: t('engine.filter.compliance.label'), status: compStatus, reason: compReason });
 
   // Filtro 8: Managed packages / namespace / licença
   const procNs = (proc.requiresNamespace || '').trim();
   const procModifiesPackage = (proc.modifiesPackageNamespace || '').trim();
-  let pkgStatus = 'pass', pkgReason = 'Nenhum requisito de namespace.';
+  let pkgStatus = 'pass', pkgReason = t('engine.filter.packages.none');
   const installed = org.installedPackages || [];
   const totalPkg = Math.max(installed.length, org.installedPackageCount || 0);
   if (procNs) {
     const conflict = installed.find(p => p.namespace === procNs);
     if (conflict) {
       pkgStatus = 'fail';
-      pkgReason = `Namespace "${procNs}" já ocupado pelo package "${conflict.name}" nessa org — conflito impede instalação.`;
+      pkgReason = t('engine.filter.packages.namespaceConflict', { ns: procNs, name: conflict.name });
     } else {
       pkgStatus = 'pass';
-      pkgReason = `Namespace "${procNs}" livre. Org tem ${totalPkg} package(s) instalado(s).`;
+      pkgReason = t('engine.filter.packages.namespaceFree', { ns: procNs, total: totalPkg });
     }
   }
   if (pkgStatus !== 'fail' && procModifiesPackage) {
     const target = installed.find(p => p.namespace === procModifiesPackage);
     if (target && target.allowsExtension === false) {
       pkgStatus = 'fail';
-      pkgReason = `Processo precisa modificar metadata do package "${target.name}" (ns=${procModifiesPackage}), mas ele é protegido (allowsExtension=false).`;
+      pkgReason = t('engine.filter.packages.notExtensible', { name: target.name, ns: procModifiesPackage });
     } else if (target && target.licenseType && target.licenseType.toLowerCase().includes('oem')) {
       pkgStatus = pkgStatus === 'pass' ? 'warn' : pkgStatus;
-      pkgReason = `Modificar package OEM "${target.name}" pode violar termos de licença — revisar contrato antes.`;
+      pkgReason = t('engine.filter.packages.oemLicense', { name: target.name });
     }
   }
   if (pkgStatus === 'pass' && totalPkg > 250) {
     pkgStatus = 'warn';
-    pkgReason = `${totalPkg} managed packages instalados (>250 sinaliza acúmulo de dependências).`;
+    pkgReason = t('engine.filter.packages.tooMany', { total: totalPkg });
   }
-  filters.push({ key: 'packages', label: 'Managed packages / namespace / licença', status: pkgStatus, reason: pkgReason });
+  filters.push({ key: 'packages', label: t('engine.filter.packages.label'), status: pkgStatus, reason: pkgReason });
 
   // Filtro 9: KYC / Sanctions / feeds externos
   const procFeeds = (() => {
@@ -427,22 +432,22 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let feedsStatus, feedsReason;
   if (procFeeds.length === 0) {
     feedsStatus = 'pass';
-    feedsReason = 'Processo não declara dependência de feeds externos (sanctions, KYC, credit bureau).';
+    feedsReason = t('engine.filter.sanctions.none');
   } else {
     const orgFeeds = new Set((org.externalFeeds || []).map(f => f.toLowerCase()));
     const missing = procFeeds.filter(f => !orgFeeds.has(f.toLowerCase()));
     if (missing.length === 0) {
       feedsStatus = 'pass';
-      feedsReason = `Todos os feeds externos exigidos disponíveis: ${procFeeds.join(', ')}.`;
+      feedsReason = t('engine.filter.sanctions.allAvailable', { list: procFeeds.join(', ') });
     } else if (missing.length === procFeeds.length) {
       feedsStatus = 'fail';
-      feedsReason = `Nenhum feed externo exigido (${procFeeds.join(', ')}) está conectado nessa org — processo não roda sem eles.`;
+      feedsReason = t('engine.filter.sanctions.noneAvailable', { list: procFeeds.join(', ') });
     } else {
       feedsStatus = 'warn';
-      feedsReason = `Feeds parcialmente disponíveis. Faltando: ${missing.join(', ')}.`;
+      feedsReason = t('engine.filter.sanctions.partial', { missing: missing.join(', ') });
     }
   }
-  filters.push({ key: 'sanctions', label: 'KYC / Sanctions / feeds externos', status: feedsStatus, reason: feedsReason });
+  filters.push({ key: 'sanctions', label: t('engine.filter.sanctions.label'), status: feedsStatus, reason: feedsReason });
 
   // Filtro 10: Custo de migração/coexistência
   const permMig = numParse(proc.permSetsToClone);
@@ -452,21 +457,21 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let migStatus, migReason;
   if (migTotal === 0) {
     migStatus = 'warn';
-    migReason = 'Custo de migração não estimado (permsets, triggers, flows). Alocar sem esse número esconde esforço real.';
+    migReason = t('engine.filter.migrationCost.noEstimate');
   } else {
     const days = Math.round((permMig * 0.5 + trigMig * 1.5 + flowMig * 1) * 10) / 10;
     if (days >= 60) {
       migStatus = 'fail';
-      migReason = `Esforço estimado: ${days} pessoa-dia (${permMig} permsets · ${trigMig} triggers · ${flowMig} flows). Custo de migração inviabiliza o reuso.`;
+      migReason = t('engine.filter.migrationCost.blocker', { days, perm: permMig, trig: trigMig, flow: flowMig });
     } else if (days >= 20) {
       migStatus = 'warn';
-      migReason = `Esforço estimado: ${days} pessoa-dia. Peso considerável — validar contra criar org nova.`;
+      migReason = t('engine.filter.migrationCost.heavy', { days });
     } else {
       migStatus = 'pass';
-      migReason = `Esforço estimado leve: ${days} pessoa-dia (${permMig} permsets · ${trigMig} triggers · ${flowMig} flows).`;
+      migReason = t('engine.filter.migrationCost.light', { days, perm: permMig, trig: trigMig, flow: flowMig });
     }
   }
-  filters.push({ key: 'migrationCost', label: 'Custo de migração', status: migStatus, reason: migReason });
+  filters.push({ key: 'migrationCost', label: t('engine.filter.migrationCost.label'), status: migStatus, reason: migReason });
 
   // Filtro 11: Sandbox strategy
   const fullCopy = org.fullCopySandboxes || 0;
@@ -477,26 +482,26 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let sbxStatus, sbxReason;
   if (fullCopy === 0 && partialCopy === 0 && devSbx === 0 && !lastRefresh) {
     sbxStatus = 'warn';
-    sbxReason = 'Sandbox strategy não declarada. Sem ambiente de teste adequado, o processo entra às cegas.';
+    sbxReason = t('engine.filter.sandbox.noStrategy');
   } else if (procCriticality === 'critical' && fullCopy === 0) {
     sbxStatus = 'fail';
-    sbxReason = `Processo crítico exige Full Copy sandbox para teste de dados reais — org não tem Full Copy declarado.`;
+    sbxReason = t('engine.filter.sandbox.criticalNoFullCopy');
   } else if (lastRefresh) {
     const refresh = new Date(lastRefresh);
     const now = new Date('2026-07-06');
     const days = Math.floor((now - refresh) / (1000 * 60 * 60 * 24));
     if (days > 180) {
       sbxStatus = 'warn';
-      sbxReason = `Último refresh do sandbox há ${days} dias — dados/metadata dessincronizados com prod.`;
+      sbxReason = t('engine.filter.sandbox.staleRefresh', { days });
     } else {
       sbxStatus = 'pass';
-      sbxReason = `Sandbox strategy OK: ${fullCopy} Full Copy · ${partialCopy} Partial · ${devSbx} Dev · refresh há ${days} dias.`;
+      sbxReason = t('engine.filter.sandbox.ok', { full: fullCopy, partial: partialCopy, dev: devSbx, days });
     }
   } else {
     sbxStatus = 'pass';
-    sbxReason = `Sandboxes: ${fullCopy} Full Copy · ${partialCopy} Partial · ${devSbx} Dev. Data do último refresh não informada.`;
+    sbxReason = t('engine.filter.sandbox.noRefreshDate', { full: fullCopy, partial: partialCopy, dev: devSbx });
   }
-  filters.push({ key: 'sandbox', label: 'Sandbox strategy', status: sbxStatus, reason: sbxReason });
+  filters.push({ key: 'sandbox', label: t('engine.filter.sandbox.label'), status: sbxStatus, reason: sbxReason });
 
   // Filtro 12: Backup / DR
   const backupProv = org.backupProvider;
@@ -508,25 +513,25 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   if (!backupProv) {
     if (procCriticality === 'critical') {
       bkStatus = 'fail';
-      bkReason = 'Processo crítico e org sem backup declarado — DR ausente é bloqueador.';
+      bkReason = t('engine.filter.backupDR.criticalNoBackup');
     } else {
       bkStatus = 'warn';
-      bkReason = 'Backup provider não declarado — validar antes de decidir.';
+      bkReason = t('engine.filter.backupDR.noProvider');
     }
   } else if (rto > requiredRto || rpo > requiredRpo) {
     bkStatus = 'fail';
-    bkReason = `Backup ${backupProv}: RTO ${rto}h/RPO ${rpo}h não atende exigência do processo (RTO≤${requiredRto}h / RPO≤${requiredRpo}h).`;
+    bkReason = t('engine.filter.backupDR.slaMiss', { provider: backupProv, rto, rpo, reqRto: requiredRto, reqRpo: requiredRpo });
   } else if (procCriticality === 'critical' && (rto === 0 || rpo === 0)) {
     bkStatus = 'warn';
-    bkReason = `Provider ${backupProv} declarado mas RTO/RPO não medidos — processo crítico exige SLA validado.`;
+    bkReason = t('engine.filter.backupDR.noSla', { provider: backupProv });
   } else if (procCriticality === 'critical' && org.backupFrequency && org.backupFrequency !== 'daily' && org.backupFrequency !== 'hourly') {
     bkStatus = 'warn';
-    bkReason = `Backup ${backupProv} frequência ${org.backupFrequency} pode ser insuficiente para processo crítico.`;
+    bkReason = t('engine.filter.backupDR.lowFrequency', { provider: backupProv, freq: org.backupFrequency });
   } else {
     bkStatus = 'pass';
-    bkReason = `Backup OK: ${backupProv} (${org.backupFrequency || 'freq n/d'}, RTO ${rto}h / RPO ${rpo}h) atende exigência.`;
+    bkReason = t('engine.filter.backupDR.ok', { provider: backupProv, freq: org.backupFrequency || t('engine.filter.backupDR.freqNa'), rto, rpo });
   }
-  filters.push({ key: 'backupDR', label: 'Backup / DR', status: bkStatus, reason: bkReason });
+  filters.push({ key: 'backupDR', label: t('engine.filter.backupDR.label'), status: bkStatus, reason: bkReason });
 
   // Filtro 13: Concurrent limits
   const concApi = org.concurrentApiUsagePct || 0;
@@ -537,18 +542,19 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   const orgConcLimit = org.concurrentApiLimit || 0;
   if (maxConc === 0) {
     concStatus = 'warn';
-    concReason = `Uso de limites concorrentes (Concurrent API, Streaming, Bulk) não medido${orgConcLimit ? ` (limite absoluto ${orgConcLimit})` : ''} — processo com picos pode estourar antes de storage/daily API.`;
+    const limitStr = orgConcLimit ? t('engine.filter.concurrentLimits.limitSuffix', { limit: orgConcLimit }) : '';
+    concReason = t('engine.filter.concurrentLimits.notMeasured', { limit: limitStr });
   } else if (maxConc >= 85) {
     concStatus = 'fail';
-    concReason = `Limites concorrentes críticos: Concurrent API ${concApi}% · Streaming ${stream}% · Bulk ${bulk}%.`;
+    concReason = t('engine.filter.concurrentLimits.critical', { api: concApi, stream, bulk });
   } else if (maxConc >= 70) {
     concStatus = 'warn';
-    concReason = `Limites concorrentes apertados (max ${maxConc}%): revisar antes de alocar processo com picos.`;
+    concReason = t('engine.filter.concurrentLimits.tight', { max: maxConc });
   } else {
     concStatus = 'pass';
-    concReason = `Folga em limites concorrentes: Concurrent API ${concApi}% · Streaming ${stream}% · Bulk ${bulk}%.`;
+    concReason = t('engine.filter.concurrentLimits.ok', { api: concApi, stream, bulk });
   }
-  filters.push({ key: 'concurrentLimits', label: 'Limites concorrentes', status: concStatus, reason: concReason });
+  filters.push({ key: 'concurrentLimits', label: t('engine.filter.concurrentLimits.label'), status: concStatus, reason: concReason });
 
   // Filtro 14: Timezone / locale
   const procTz = (proc.targetTimezone || '').trim();
@@ -556,21 +562,21 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let tzStatus, tzReason;
   if (!procTz) {
     tzStatus = 'pass';
-    tzReason = 'Processo sem exigência declarada de timezone.';
+    tzReason = t('engine.filter.timezone.none');
   } else if (!orgTz) {
     tzStatus = 'warn';
-    tzReason = `Processo exige timezone ${procTz}; org não declara timezone — validar antes.`;
+    tzReason = t('engine.filter.timezone.orgUnknown', { proc: procTz });
   } else if (procTz === orgTz) {
     tzStatus = 'pass';
-    tzReason = `Timezone alinhado (${procTz}).`;
+    tzReason = t('engine.filter.timezone.match', { tz: procTz });
   } else if (procTz.toLowerCase() === 'multi' || procTz.toLowerCase() === 'global') {
     tzStatus = 'warn';
-    tzReason = `Processo multi-região em org fixada em ${orgTz} — batch schedules e business hours precisam ajuste.`;
+    tzReason = t('engine.filter.timezone.multiRegion', { org: orgTz });
   } else {
     tzStatus = 'fail';
-    tzReason = `Timezone incompatível: processo=${procTz}, org=${orgTz}. Impacto em holidays, business hours, batch windows.`;
+    tzReason = t('engine.filter.timezone.mismatch', { proc: procTz, org: orgTz });
   }
-  filters.push({ key: 'timezone', label: 'Timezone / locale', status: tzStatus, reason: tzReason });
+  filters.push({ key: 'timezone', label: t('engine.filter.timezone.label'), status: tzStatus, reason: tzReason });
 
   // Filtro 15: External tenants (MC, DC, Auth0, ERP...)
   const procTenants = (() => {
@@ -582,22 +588,22 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let tenStatus, tenReason;
   if (procTenants.length === 0) {
     tenStatus = 'pass';
-    tenReason = 'Processo sem dependência de tenants externos declarada.';
+    tenReason = t('engine.filter.externalTenants.none');
   } else {
-    const connected = new Set((org.connectedTenants || []).map(t => t.toLowerCase()));
-    const missing = procTenants.filter(t => !connected.has(t.toLowerCase()));
+    const connected = new Set((org.connectedTenants || []).map(tn => tn.toLowerCase()));
+    const missing = procTenants.filter(tn => !connected.has(tn.toLowerCase()));
     if (missing.length === 0) {
       tenStatus = 'pass';
-      tenReason = `Todos os tenants exigidos conectados: ${procTenants.join(', ')}.`;
+      tenReason = t('engine.filter.externalTenants.allConnected', { list: procTenants.join(', ') });
     } else if (missing.length === procTenants.length) {
       tenStatus = 'fail';
-      tenReason = `Nenhum tenant externo exigido (${procTenants.join(', ')}) está conectado — processo não integra.`;
+      tenReason = t('engine.filter.externalTenants.noneConnected', { list: procTenants.join(', ') });
     } else {
       tenStatus = 'warn';
-      tenReason = `Tenants parcialmente conectados. Faltando: ${missing.join(', ')}.`;
+      tenReason = t('engine.filter.externalTenants.partial', { missing: missing.join(', ') });
     }
   }
-  filters.push({ key: 'externalTenants', label: 'Tenants externos (MC/DC/ERP/Auth0)', status: tenStatus, reason: tenReason });
+  filters.push({ key: 'externalTenants', label: t('engine.filter.externalTenants.label'), status: tenStatus, reason: tenReason });
 
   // Filtro 16: Support tier
   const tier = (org.supportTier || '').toLowerCase();
@@ -606,52 +612,54 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   const requiredTier = procCriticality === 'critical' ? 'premier' : procCriticality === 'high' ? 'premier' : 'standard';
   if (!tier) {
     supStatus = procCriticality === 'critical' ? 'fail' : 'warn';
-    supReason = `Support tier da org não declarado; processo criticidade=${procCriticality} exige ${requiredTier}+.`;
+    supReason = t('engine.filter.supportTier.unknown', { crit: procCriticality, required: requiredTier });
   } else if ((tierRank[tier] || 0) >= (tierRank[requiredTier] || 0)) {
     supStatus = 'pass';
-    supReason = `Support tier ${tier} atende criticidade ${procCriticality}.`;
+    supReason = t('engine.filter.supportTier.ok', { tier, crit: procCriticality });
   } else {
     supStatus = 'fail';
-    supReason = `Support tier insuficiente: org=${tier}, criticidade do processo=${procCriticality} exige ${requiredTier}+.`;
+    supReason = t('engine.filter.supportTier.insufficient', { tier, crit: procCriticality, required: requiredTier });
   }
-  filters.push({ key: 'supportTier', label: 'Support tier Salesforce', status: supStatus, reason: supReason });
+  filters.push({ key: 'supportTier', label: t('engine.filter.supportTier.label'), status: supStatus, reason: supReason });
 
   // Filtro 17: Incidents / uptime
   const inc = org.incidentsLast12mo;
   const upt = org.uptimePct;
   let opStatus, opReason;
+  const incStr = inc != null ? t('engine.filter.incidents.incValue', { n: inc }) : t('engine.filter.incidents.incNa');
+  const uptStr = upt != null ? t('engine.filter.incidents.uptimeValue', { pct: upt }) : t('engine.filter.incidents.uptimeNa');
   if (inc == null && upt == null) {
     opStatus = 'warn';
-    opReason = 'Histórico operacional (incidents, uptime) não declarado.';
+    opReason = t('engine.filter.incidents.none');
   } else if ((inc != null && inc >= 5) || (upt != null && upt < 99.0)) {
     opStatus = 'fail';
-    opReason = `Histórico degradado: ${inc != null ? `${inc} incidents/12mo` : 'incidents n/d'} · ${upt != null ? `uptime ${upt}%` : 'uptime n/d'}.`;
+    opReason = t('engine.filter.incidents.degraded', { inc: incStr, upt: uptStr });
   } else if ((inc != null && inc >= 2) || (upt != null && upt < 99.5)) {
     opStatus = 'warn';
-    opReason = `Histórico apertado: ${inc != null ? `${inc} incidents/12mo` : 'incidents n/d'} · ${upt != null ? `uptime ${upt}%` : 'uptime n/d'}.`;
+    opReason = t('engine.filter.incidents.tight', { inc: incStr, upt: uptStr });
   } else {
     opStatus = 'pass';
-    opReason = `Histórico saudável: ${inc != null ? `${inc} incidents/12mo` : 'incidents n/d'} · ${upt != null ? `uptime ${upt}%` : 'uptime n/d'}.`;
+    opReason = t('engine.filter.incidents.healthy', { inc: incStr, upt: uptStr });
   }
-  filters.push({ key: 'incidents', label: 'Incidents / uptime', status: opStatus, reason: opReason });
+  filters.push({ key: 'incidents', label: t('engine.filter.incidents.label'), status: opStatus, reason: opReason });
 
   // Filtro 18: Documentation
   const docs = org.documentationScore;
   let docStatus, docReason;
   if (docs == null) {
     docStatus = 'warn';
-    docReason = 'Score de documentação não declarado — assumir ausência encarece onboarding.';
+    docReason = t('engine.filter.documentation.none');
   } else if (docs < 40) {
     docStatus = 'fail';
-    docReason = `Documentação insuficiente (score ${docs}/100) — sem runbook/ADR/model docs, absorver processo novo é caro.`;
+    docReason = t('engine.filter.documentation.insufficient', { score: docs });
   } else if (docs < 70) {
     docStatus = 'warn';
-    docReason = `Documentação parcial (score ${docs}/100). Reforçar antes de acomodar processo crítico.`;
+    docReason = t('engine.filter.documentation.partial', { score: docs });
   } else {
     docStatus = 'pass';
-    docReason = `Documentação adequada (score ${docs}/100).`;
+    docReason = t('engine.filter.documentation.ok', { score: docs });
   }
-  filters.push({ key: 'documentation', label: 'Documentação / runbooks', status: docStatus, reason: docReason });
+  filters.push({ key: 'documentation', label: t('engine.filter.documentation.label'), status: docStatus, reason: docReason });
 
   // Filtro 19: UX overhead
   const tabs = org.tabCount || 0;
@@ -660,18 +668,18 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let uxStatus, uxReason;
   if (tabs === 0 && layouts === 0 && rts === 0) {
     uxStatus = 'pass';
-    uxReason = 'Sem métricas de UX overhead — assume org limpa.';
+    uxReason = t('engine.filter.uxOverhead.none');
   } else if (tabs > 150 || layouts > 300 || rts > 100) {
     uxStatus = 'fail';
-    uxReason = `UX degradada: ${tabs} tabs · ${layouts} layouts · ${rts} record types. Adicionar processo piora para todos os usuários.`;
+    uxReason = t('engine.filter.uxOverhead.degraded', { tabs, layouts, rts });
   } else if (tabs > 100 || layouts > 200 || rts > 60) {
     uxStatus = 'warn';
-    uxReason = `UX pesada: ${tabs} tabs · ${layouts} layouts · ${rts} record types. Cuidado ao adicionar mais.`;
+    uxReason = t('engine.filter.uxOverhead.heavy', { tabs, layouts, rts });
   } else {
     uxStatus = 'pass';
-    uxReason = `UX saudável: ${tabs} tabs · ${layouts} layouts · ${rts} record types.`;
+    uxReason = t('engine.filter.uxOverhead.ok', { tabs, layouts, rts });
   }
-  filters.push({ key: 'uxOverhead', label: 'UX overhead', status: uxStatus, reason: uxReason });
+  filters.push({ key: 'uxOverhead', label: t('engine.filter.uxOverhead.label'), status: uxStatus, reason: uxReason });
 
   // Filtro 20: Platform Events / CDC / Pub-Sub API
   const parseEventList = raw2 => {
@@ -701,7 +709,7 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let peStatus, peReason;
   if (procPublishes.length === 0 && procConsumes.length === 0 && procRequiresCdc.length === 0 && !procRequiresPubSubApi) {
     peStatus = 'pass';
-    peReason = 'Processo não declara publicação/consumo de Platform Events, CDC ou uso de Pub/Sub API.';
+    peReason = t('engine.filter.platformEvents.none');
   } else {
     const orgPeUsage = org.platformEventUsagePct || 0;
     const orgPublished = new Map((org.platformEventPublishedTypes || []).map(p => [p.name.toLowerCase(), p]));
@@ -720,35 +728,35 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     if (procTotalPubDaily > 0 && orgDailyLimit > 0) {
       const addPct = Math.round((procTotalPubDaily / orgDailyLimit) * 100);
       projPct = orgPeUsage + addPct;
-      if (projPct >= 90) issues.push(`quota de eventos pós-alocação estoura (${projPct}% do daily limit; org já em ${orgPeUsage}%, processo adiciona +${addPct}pp)`);
-      else if (projPct >= 70) warnings.push(`quota de eventos pós-alocação apertada (${projPct}%; org em ${orgPeUsage}%, +${addPct}pp)`);
+      if (projPct >= 90) issues.push(t('engine.filter.platformEvents.issue.quotaOverflow', { proj: projPct, org: orgPeUsage, add: addPct }));
+      else if (projPct >= 70) warnings.push(t('engine.filter.platformEvents.warn.quotaTight', { proj: projPct, org: orgPeUsage, add: addPct }));
     } else if (orgPeUsage >= 90) {
-      issues.push(`org já em ${orgPeUsage}% do quota de eventos — sem folga para novo processo`);
+      issues.push(t('engine.filter.platformEvents.issue.orgQuotaFull', { pct: orgPeUsage }));
     } else if (orgPeUsage >= 70) {
-      warnings.push(`org em ${orgPeUsage}% do quota de eventos`);
+      warnings.push(t('engine.filter.platformEvents.warn.orgQuotaTight', { pct: orgPeUsage }));
     }
 
     // 2. High-volume PE requirement
     const wantsHvpe = procPublishes.some(e => e.dailyVolume > 100000);
     if (wantsHvpe && !orgHvpe) {
-      issues.push('processo publica >100k eventos/dia mas HVPE não está habilitado na org');
+      issues.push(t('engine.filter.platformEvents.issue.hvpeMissing'));
     }
 
     // 3. Consumo de PEs não publicados
     const missingPublished = procConsumes.filter(e => !orgPublished.has(e.name.toLowerCase()));
     if (missingPublished.length > 0) {
-      issues.push(`processo consome eventos que a org não publica: ${missingPublished.map(e => e.name).join(', ')}`);
+      issues.push(t('engine.filter.platformEvents.issue.consumeMissing', { list: missingPublished.map(e => e.name).join(', ') }));
     }
 
     // 4. CDC entities
     const missingCdc = procRequiresCdc.filter(e => !orgCdc.has(e.toLowerCase()));
     if (missingCdc.length > 0) {
-      warnings.push(`CDC não habilitado para: ${missingCdc.join(', ')} (ativação exige Setup)`);
+      warnings.push(t('engine.filter.platformEvents.warn.cdcMissing', { list: missingCdc.join(', ') }));
     }
 
     // 5. Pub/Sub API
     if (procRequiresPubSubApi && !orgPubSub) {
-      issues.push('processo exige Pub/Sub API (gRPC) mas a org não tem endpoint habilitado — força CometD legado');
+      issues.push(t('engine.filter.platformEvents.issue.pubSubMissing'));
     }
 
     if (issues.length > 0) {
@@ -759,15 +767,15 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
       peReason = warnings.join(' · ');
     } else {
       const parts = [];
-      if (procPublishes.length) parts.push(`publica ${procPublishes.length} PE(s), quota projetada ${projPct}%`);
-      if (procConsumes.length) parts.push(`consome ${procConsumes.length} PE(s) todos disponíveis`);
-      if (procRequiresCdc.length) parts.push(`CDC OK para ${procRequiresCdc.join(', ')}`);
-      if (procRequiresPubSubApi) parts.push('Pub/Sub API habilitado');
+      if (procPublishes.length) parts.push(t('engine.filter.platformEvents.part.publishes', { n: procPublishes.length, proj: projPct }));
+      if (procConsumes.length) parts.push(t('engine.filter.platformEvents.part.consumes', { n: procConsumes.length }));
+      if (procRequiresCdc.length) parts.push(t('engine.filter.platformEvents.part.cdcOk', { list: procRequiresCdc.join(', ') }));
+      if (procRequiresPubSubApi) parts.push(t('engine.filter.platformEvents.part.pubSubOk'));
       peStatus = 'pass';
-      peReason = 'Event backbone alinhado: ' + parts.join(' · ') + '.';
+      peReason = t('engine.filter.platformEvents.ok', { parts: parts.join(' · ') });
     }
   }
-  filters.push({ key: 'platformEvents', label: 'Platform Events / CDC / Pub-Sub API', status: peStatus, reason: peReason });
+  filters.push({ key: 'platformEvents', label: t('engine.filter.platformEvents.label'), status: peStatus, reason: peReason });
 
   // ============================================================
   // Filtro 21: teamCapacity — headcount + utilization + skills
@@ -784,21 +792,24 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let teamStatus, teamReason;
   if (hc === 0 && util === 0 && skills.size === 0) {
     teamStatus = 'warn';
-    teamReason = 'Team capacity não declarada — reuso pode encontrar time no limite.';
+    teamReason = t('engine.filter.teamCapacity.none');
   } else {
     const missingSkills = requiredSkills.filter(s => !skills.has(s.toLowerCase()));
     if (util >= 90 || (requiredHc > 0 && hc < requiredHc)) {
       teamStatus = 'fail';
-      teamReason = `Team saturado: ${hc} FTE @ ${util}% util${requiredHc ? `; processo exige ${requiredHc} FTE dedicados` : ''}.`;
+      const fteSuffix = requiredHc ? t('engine.filter.teamCapacity.saturated.fteSuffix', { req: requiredHc }) : '';
+      teamReason = t('engine.filter.teamCapacity.saturated', { hc, util, suffix: fteSuffix });
     } else if (util >= 75 || missingSkills.length > 0) {
       teamStatus = 'warn';
-      teamReason = `Team apertado: ${util}% util${missingSkills.length ? ` · faltam skills: ${missingSkills.join(', ')}` : ''}.`;
+      const skillsSuffix = missingSkills.length ? t('engine.filter.teamCapacity.tight.skillsSuffix', { list: missingSkills.join(', ') }) : '';
+      teamReason = t('engine.filter.teamCapacity.tight', { util, suffix: skillsSuffix });
     } else {
       teamStatus = 'pass';
-      teamReason = `Team folgado: ${hc} FTE @ ${util}% util${requiredSkills.length ? ` · skills OK` : ''}.`;
+      const skillsSuffix = requiredSkills.length ? t('engine.filter.teamCapacity.ok.skillsSuffix') : '';
+      teamReason = t('engine.filter.teamCapacity.ok', { hc, util, suffix: skillsSuffix });
     }
   }
-  filters.push({ key: 'teamCapacity', label: 'Team capacity / skills', status: teamStatus, reason: teamReason });
+  filters.push({ key: 'teamCapacity', label: t('engine.filter.teamCapacity.label'), status: teamStatus, reason: teamReason });
 
   // ============================================================
   // Filtro 22: mdmOwnership — source of truth vs. consumidor
@@ -814,39 +825,39 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let mdmStatus, mdmReason;
   if (procTouchesMdmEntities.length === 0) {
     mdmStatus = 'pass';
-    mdmReason = 'Processo não declara entidades de master data.';
+    mdmReason = t('engine.filter.mdmOwnership.none');
   } else if (!procMdmRole) {
     mdmStatus = 'warn';
-    mdmReason = `Processo declara master data (${procTouchesMdmEntities.join(', ')}) mas não define papel (owner/consumer) — risco de duplicação.`;
+    mdmReason = t('engine.filter.mdmOwnership.roleUndefined', { list: procTouchesMdmEntities.join(', ') });
   } else if (procMdmRole === 'owner') {
     const conflict = procTouchesMdmEntities.filter(e => owner.has(e.toLowerCase()) === false);
     if (conflict.length > 0 && procTouchesMdmEntities.some(e => consumer.has(e.toLowerCase()))) {
       mdmStatus = 'fail';
-      mdmReason = `Processo quer ser owner de ${conflict.join(', ')} mas org é consumer — introduziria golden record duplicado.`;
+      mdmReason = t('engine.filter.mdmOwnership.owner.conflict', { list: conflict.join(', ') });
     } else if (conflict.length > 0) {
       mdmStatus = 'warn';
-      mdmReason = `Org ainda não é ownership para ${conflict.join(', ')} — validar transição de source of truth.`;
+      mdmReason = t('engine.filter.mdmOwnership.owner.transition', { list: conflict.join(', ') });
     } else {
       mdmStatus = 'pass';
-      mdmReason = `Org já é owner de ${procTouchesMdmEntities.join(', ')}.`;
+      mdmReason = t('engine.filter.mdmOwnership.owner.ok', { list: procTouchesMdmEntities.join(', ') });
     }
   } else if (procMdmRole === 'consumer') {
     const notConsumer = procTouchesMdmEntities.filter(e => !consumer.has(e.toLowerCase()));
     if (notConsumer.length === procTouchesMdmEntities.length) {
       mdmStatus = 'fail';
-      mdmReason = `Processo é consumer de ${procTouchesMdmEntities.join(', ')} mas org não está declarada como consumer — provável fonte errada.`;
+      mdmReason = t('engine.filter.mdmOwnership.consumer.wrongSource', { list: procTouchesMdmEntities.join(', ') });
     } else if (notConsumer.length > 0) {
       mdmStatus = 'warn';
-      mdmReason = `Consumo parcial de master data: ${notConsumer.join(', ')} não declarados na org.`;
+      mdmReason = t('engine.filter.mdmOwnership.consumer.partial', { list: notConsumer.join(', ') });
     } else {
       mdmStatus = 'pass';
-      mdmReason = `Consumo de master data alinhado: ${procTouchesMdmEntities.join(', ')}.`;
+      mdmReason = t('engine.filter.mdmOwnership.consumer.ok', { list: procTouchesMdmEntities.join(', ') });
     }
   } else {
     mdmStatus = 'warn';
-    mdmReason = `Papel MDM "${procMdmRole}" não reconhecido.`;
+    mdmReason = t('engine.filter.mdmOwnership.unknownRole', { role: procMdmRole });
   }
-  filters.push({ key: 'mdmOwnership', label: 'Master data ownership', status: mdmStatus, reason: mdmReason });
+  filters.push({ key: 'mdmOwnership', label: t('engine.filter.mdmOwnership.label'), status: mdmStatus, reason: mdmReason });
 
   // ============================================================
   // Filtro 23: peakVsSustained — pico vs. média
@@ -856,7 +867,7 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let peakStatus, peakReason;
   if (peakApiPerSec === 0 && peakEventsPerSec === 0) {
     peakStatus = 'warn';
-    peakReason = 'Picos por segundo não estimados — motor só valida média diária, processo de burst pode estourar Concurrent limits.';
+    peakReason = t('engine.filter.peakVsSustained.notEstimated');
   } else {
     const concurrentApiHead = 100 - (org.concurrentApiUsagePct || 0);
     const streamingHead = 100 - (org.streamingClientsPct || 0);
@@ -865,16 +876,16 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     const maxProj = Math.max(projConcApi, projStream);
     if (maxProj >= 90) {
       peakStatus = 'fail';
-      peakReason = `Pico projetado estoura: Concurrent API ${projConcApi}%, Streaming ${projStream}% (peaks: ${peakApiPerSec}req/s, ${peakEventsPerSec} evt/s).`;
+      peakReason = t('engine.filter.peakVsSustained.overflow', { api: projConcApi, stream: projStream, apiPeak: peakApiPerSec, evtPeak: peakEventsPerSec });
     } else if (maxProj >= 70) {
       peakStatus = 'warn';
-      peakReason = `Pico projetado apertado: ${maxProj}% do limite concorrente — margem estreita.`;
+      peakReason = t('engine.filter.peakVsSustained.tight', { max: maxProj });
     } else {
       peakStatus = 'pass';
-      peakReason = `Picos absorvem: Concurrent API ${projConcApi}%, Streaming ${projStream}%.`;
+      peakReason = t('engine.filter.peakVsSustained.ok', { api: projConcApi, stream: projStream });
     }
   }
-  filters.push({ key: 'peakVsSustained', label: 'Pico vs. sustentado', status: peakStatus, reason: peakReason });
+  filters.push({ key: 'peakVsSustained', label: t('engine.filter.peakVsSustained.label'), status: peakStatus, reason: peakReason });
 
   // ============================================================
   // Filtro 24: featureCombos — dependências transitivas
@@ -883,23 +894,23 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   const combos = [];
   if (procFeatures.has('dataCloud') && procFeatures.has('agentforce')) {
     if (!(org.dataCloudEnabled && org.agentforceEnabled)) {
-      combos.push({ sev: 'fail', msg: 'Data Cloud + Agentforce exige ambos ativos e mapeamento de identidade compartilhado.' });
+      combos.push({ sev: 'fail', msg: t('engine.filter.featureCombos.dcAgentforceMissing') });
     } else if (!org.experienceCloudEnabled) {
-      combos.push({ sev: 'warn', msg: 'Data Cloud + Agentforce tipicamente exige Experience Cloud para surfacing — não habilitado.' });
+      combos.push({ sev: 'warn', msg: t('engine.filter.featureCombos.dcAgentforceNoExp') });
     }
   }
   if (procFeatures.has('shield') && procFeatures.has('fat')) {
     if (!(org.shieldEnabled && org.fatEnabled)) {
-      combos.push({ sev: 'fail', msg: 'Shield + FAT exige ambos ativos e key management coordenado.' });
+      combos.push({ sev: 'fail', msg: t('engine.filter.featureCombos.shieldFatMissing') });
     }
   }
   if (procFeatures.has('experienceCloud') && procFeatures.has('shield') && !org.shieldEnabled) {
-    combos.push({ sev: 'warn', msg: 'Experience Cloud com dados criptografados por Shield exige policy tuning específica.' });
+    combos.push({ sev: 'warn', msg: t('engine.filter.featureCombos.expShieldMissing') });
   }
   let comboStatus, comboReason;
   if (combos.length === 0) {
     comboStatus = 'pass';
-    comboReason = 'Nenhum combo de features com dependência transitiva conhecida.';
+    comboReason = t('engine.filter.featureCombos.none');
   } else if (combos.some(c => c.sev === 'fail')) {
     comboStatus = 'fail';
     comboReason = combos.map(c => c.msg).join(' · ');
@@ -907,7 +918,7 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     comboStatus = 'warn';
     comboReason = combos.map(c => c.msg).join(' · ');
   }
-  filters.push({ key: 'featureCombos', label: 'Combos de features', status: comboStatus, reason: comboReason });
+  filters.push({ key: 'featureCombos', label: t('engine.filter.featureCombos.label'), status: comboStatus, reason: comboReason });
 
   // ============================================================
   // Filtro 25: runCostRecurring — licenças + add-ons mensais
@@ -920,13 +931,13 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   // Cascade: ativar features requer SKUs adicionais e frequentemente puxa outras.
   // Estimativas conservadoras — USD/mês típico do mercado 2026 para uma org médio-porte.
   const CASCADE_COSTS = {
-    dataCloud:       { base: 12000, deps: ['identity'], depNote: 'Data Cloud tipicamente exige Identity para unificação de perfis' },
-    agentforce:      { base: 8000,  deps: ['dataCloud','einsteinPlatform'], depNote: 'Agentforce depende de Data Cloud + Einstein Platform (credit-based)' },
-    shield:          { base: 6000,  deps: [], depNote: null },
-    fat:             { base: 3000,  deps: ['shield'], depNote: 'FAT tipicamente compra-se com Shield' },
-    eventMonitoring: { base: 4000,  deps: [], depNote: null },
-    experienceCloud: { base: 5000,  deps: [], depNote: null },
-    multiCurrency:   { base: 0,     deps: [], depNote: 'Multi-Currency é feature, não SKU — mas irreversível' }
+    dataCloud:       { base: 12000, deps: ['identity'], depNoteKey: 'engine.filter.runCostRecurring.cascade.depNote.dataCloud' },
+    agentforce:      { base: 8000,  deps: ['dataCloud','einsteinPlatform'], depNoteKey: 'engine.filter.runCostRecurring.cascade.depNote.agentforce' },
+    shield:          { base: 6000,  deps: [], depNoteKey: null },
+    fat:             { base: 3000,  deps: ['shield'], depNoteKey: 'engine.filter.runCostRecurring.cascade.depNote.fat' },
+    eventMonitoring: { base: 4000,  deps: [], depNoteKey: null },
+    experienceCloud: { base: 5000,  deps: [], depNoteKey: null },
+    multiCurrency:   { base: 0,     deps: [], depNoteKey: 'engine.filter.runCostRecurring.cascade.depNote.multiCurrency' }
   };
   const cascade = { addedMonthly: 0, chain: [] };
   const featuresList = proc.features || [];
@@ -951,31 +962,34 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
       chainSeen.add(dep);
       const depCost = (CASCADE_COSTS[dep] && CASCADE_COSTS[dep].base) || 3000;
       cascade.addedMonthly += depCost;
-      cascade.chain.push({ sku: dep, monthly: depCost, note: c.depNote });
+      cascade.chain.push({ sku: dep, monthly: depCost, note: c.depNoteKey ? t(c.depNoteKey) : null });
     }
   }
 
   let costStatus, costReason;
   if (procUsersNew === 0 && procMonthlyBudget === 0) {
     costStatus = 'warn';
-    costReason = `Run-cost recorrente não estimado (users novos, budget mensal). Podem escalar licenças sem visibilidade${cascade.addedMonthly > 0 ? `; cascade estimado US$${cascade.addedMonthly.toLocaleString()}/mês em ${cascade.chain.map(c=>c.sku).join(', ')}` : ''}.`;
+    const cascadeSuffix = cascade.addedMonthly > 0
+      ? t('engine.filter.runCostRecurring.cascadeSuffix.warn', { amount: cascade.addedMonthly.toLocaleString(), skus: cascade.chain.map(c=>c.sku).join(', ') })
+      : '';
+    costReason = t('engine.filter.runCostRecurring.notEstimated', { cascade: cascadeSuffix });
   } else {
     const projMonthly = procUsersNew * costPU + addonCost + cascade.addedMonthly;
     const cascadeStr = cascade.addedMonthly > 0
-      ? ` (inclui cascade de add-ons +US$${cascade.addedMonthly.toLocaleString()}/mês em ${cascade.chain.map(c=>c.sku).join(', ')})`
+      ? t('engine.filter.runCostRecurring.cascadeSuffix.detail', { amount: cascade.addedMonthly.toLocaleString(), skus: cascade.chain.map(c=>c.sku).join(', ') })
       : '';
     if (procMonthlyBudget > 0 && projMonthly > procMonthlyBudget * 1.5) {
       costStatus = 'fail';
-      costReason = `Custo mensal projetado US$${projMonthly.toLocaleString()} excede 150% do budget (US$${procMonthlyBudget.toLocaleString()})${cascadeStr}.`;
+      costReason = t('engine.filter.runCostRecurring.exceeds', { proj: projMonthly.toLocaleString(), budget: procMonthlyBudget.toLocaleString(), cascade: cascadeStr });
     } else if (procMonthlyBudget > 0 && projMonthly > procMonthlyBudget) {
       costStatus = 'warn';
-      costReason = `Custo mensal projetado US$${projMonthly.toLocaleString()} estoura budget (US$${procMonthlyBudget.toLocaleString()})${cascadeStr} — validar contratação.`;
+      costReason = t('engine.filter.runCostRecurring.overBudget', { proj: projMonthly.toLocaleString(), budget: procMonthlyBudget.toLocaleString(), cascade: cascadeStr });
     } else {
       costStatus = 'pass';
-      costReason = `Custo mensal projetado US$${projMonthly.toLocaleString()} dentro do budget${cascadeStr}.`;
+      costReason = t('engine.filter.runCostRecurring.ok', { proj: projMonthly.toLocaleString(), cascade: cascadeStr });
     }
   }
-  filters.push({ key: 'runCostRecurring', label: 'Run-cost recorrente (com cascade)', status: costStatus, reason: costReason, cascade });
+  filters.push({ key: 'runCostRecurring', label: t('engine.filter.runCostRecurring.label'), status: costStatus, reason: costReason, cascade });
 
   // ============================================================
   // Filtro 26: sessionConcurrency — long-running / future / queueable
@@ -989,21 +1003,21 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let sessStatus, sessReason;
   if (clr === 0 && fqp === 0 && qdepth === 0 && !(procUsesLongRunning || procUsesFuture || procUsesQueueable)) {
     sessStatus = 'pass';
-    sessReason = 'Processo não usa long-running/@future/Queueable e org sem sinais de saturação.';
+    sessReason = t('engine.filter.sessionConcurrency.none');
   } else {
     const issues = [];
     const warns = [];
-    if (procUsesLongRunning && clr >= 80) issues.push(`Concurrent long-running em ${clr}% (limite 10)`);
-    else if (procUsesLongRunning && clr >= 60) warns.push(`Concurrent long-running em ${clr}%`);
-    if (procUsesFuture && fqp >= 80) issues.push(`@future queue em ${fqp}%`);
-    else if (procUsesFuture && fqp >= 60) warns.push(`@future queue em ${fqp}%`);
-    if (procUsesQueueable && qdepth >= 5) issues.push(`Queueable chain depth ${qdepth} (limite 5 em prod)`);
-    else if (procUsesQueueable && qdepth >= 3) warns.push(`Queueable chain depth ${qdepth}`);
+    if (procUsesLongRunning && clr >= 80) issues.push(t('engine.filter.sessionConcurrency.issue.longRunningCrit', { pct: clr }));
+    else if (procUsesLongRunning && clr >= 60) warns.push(t('engine.filter.sessionConcurrency.warn.longRunning', { pct: clr }));
+    if (procUsesFuture && fqp >= 80) issues.push(t('engine.filter.sessionConcurrency.issue.futureCrit', { pct: fqp }));
+    else if (procUsesFuture && fqp >= 60) warns.push(t('engine.filter.sessionConcurrency.warn.future', { pct: fqp }));
+    if (procUsesQueueable && qdepth >= 5) issues.push(t('engine.filter.sessionConcurrency.issue.queueableCrit', { depth: qdepth }));
+    else if (procUsesQueueable && qdepth >= 3) warns.push(t('engine.filter.sessionConcurrency.warn.queueable', { depth: qdepth }));
     if (issues.length) { sessStatus = 'fail'; sessReason = issues.join(' · '); }
     else if (warns.length) { sessStatus = 'warn'; sessReason = warns.join(' · '); }
-    else { sessStatus = 'pass'; sessReason = `Session concurrency OK (long-running ${clr}%, @future ${fqp}%, queueable depth ${qdepth}).`; }
+    else { sessStatus = 'pass'; sessReason = t('engine.filter.sessionConcurrency.ok', { lr: clr, fut: fqp, depth: qdepth }); }
   }
-  filters.push({ key: 'sessionConcurrency', label: 'Session concurrency (long-running/@future/Queueable)', status: sessStatus, reason: sessReason });
+  filters.push({ key: 'sessionConcurrency', label: t('engine.filter.sessionConcurrency.label'), status: sessStatus, reason: sessReason });
 
   // ============================================================
   // Filtro 27: interOrgLatency — medida P95 entre orgs
@@ -1013,28 +1027,28 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   const procIntegOrgs = (proc.integratesWithOrgs || '').split(',').map(s => s.trim()).filter(Boolean);
   if (procIntegOrgs.length === 0 || procMaxLatencyMs === 0) {
     latStatus = 'pass';
-    latReason = 'Sem exigência de latência inter-org declarada.';
+    latReason = t('engine.filter.interOrgLatency.none');
   } else {
     const measurements = org.interOrgLatencyMsP95 || {};
     const missing = procIntegOrgs.filter(o => measurements[o] == null);
     const violating = procIntegOrgs.filter(o => measurements[o] != null && measurements[o] > procMaxLatencyMs);
     if (missing.length === procIntegOrgs.length) {
       latStatus = 'warn';
-      latReason = `Latência inter-org não medida para ${procIntegOrgs.join(', ')} — validar antes.`;
+      latReason = t('engine.filter.interOrgLatency.notMeasured', { list: procIntegOrgs.join(', ') });
     } else if (violating.length > 0) {
       latStatus = 'fail';
       const detail = violating.map(o => `${o}=${measurements[o]}ms`).join(', ');
-      latReason = `Latência viola SLA (${procMaxLatencyMs}ms): ${detail}.`;
+      latReason = t('engine.filter.interOrgLatency.violation', { max: procMaxLatencyMs, detail });
     } else if (missing.length > 0) {
       latStatus = 'warn';
-      latReason = `Latência OK para ${procIntegOrgs.filter(o => !missing.includes(o)).join(', ')}, faltando medir: ${missing.join(', ')}.`;
+      latReason = t('engine.filter.interOrgLatency.partial', { okList: procIntegOrgs.filter(o => !missing.includes(o)).join(', '), missing: missing.join(', ') });
     } else {
       latStatus = 'pass';
       const detail = procIntegOrgs.map(o => `${o}=${measurements[o]}ms`).join(', ');
-      latReason = `Latência P95 dentro do SLA: ${detail} ≤ ${procMaxLatencyMs}ms.`;
+      latReason = t('engine.filter.interOrgLatency.ok', { detail, max: procMaxLatencyMs });
     }
   }
-  filters.push({ key: 'interOrgLatency', label: 'Latência inter-org medida', status: latStatus, reason: latReason });
+  filters.push({ key: 'interOrgLatency', label: t('engine.filter.interOrgLatency.label'), status: latStatus, reason: latReason });
 
   // ============================================================
   // Filtro 28: sharingModelFit
@@ -1045,26 +1059,26 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let shStatus, shReason;
   if (!procSharing) {
     shStatus = 'pass';
-    shReason = 'Processo sem exigência específica de sharing model.';
+    shReason = t('engine.filter.sharingModelFit.none');
   } else if (!orgSharing) {
     shStatus = 'warn';
-    shReason = `Processo pede sharing "${procSharing}" mas org não declara modelo.`;
+    shReason = t('engine.filter.sharingModelFit.orgUnknown', { proc: procSharing });
   } else if (procSharing === orgSharing) {
     if (orgRoleDepth > 8) {
       shStatus = 'warn';
-      shReason = `Sharing model ${orgSharing} alinhado, mas role hierarchy profunda (${orgRoleDepth} níveis) degrada performance.`;
+      shReason = t('engine.filter.sharingModelFit.deepHierarchy', { model: orgSharing, depth: orgRoleDepth });
     } else {
       shStatus = 'pass';
-      shReason = `Sharing model ${orgSharing} alinhado (role depth ${orgRoleDepth}).`;
+      shReason = t('engine.filter.sharingModelFit.aligned', { model: orgSharing, depth: orgRoleDepth });
     }
   } else if ((procSharing === 'private' && orgSharing === 'public') || (procSharing === 'public' && orgSharing === 'private')) {
     shStatus = 'fail';
-    shReason = `Sharing incompatível: processo pede ${procSharing}, org é ${orgSharing}.`;
+    shReason = t('engine.filter.sharingModelFit.incompatible', { proc: procSharing, org: orgSharing });
   } else {
     shStatus = 'warn';
-    shReason = `Sharing model divergente: processo ${procSharing}, org ${orgSharing} — validar impacto.`;
+    shReason = t('engine.filter.sharingModelFit.divergent', { proc: procSharing, org: orgSharing });
   }
-  filters.push({ key: 'sharingModelFit', label: 'Sharing model fit', status: shStatus, reason: shReason });
+  filters.push({ key: 'sharingModelFit', label: t('engine.filter.sharingModelFit.label'), status: shStatus, reason: shReason });
 
   // ============================================================
   // Filtro 29: licenseContention — usuário do processo cabe?
@@ -1074,27 +1088,27 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let licStatus, licReason;
   if (!procLicense) {
     licStatus = 'pass';
-    licReason = 'Processo não exige tipo de licença específico.';
+    licReason = t('engine.filter.licenseContention.none');
   } else {
     const availCount = availLic[procLicense];
     if (availCount == null) {
       licStatus = 'warn';
-      licReason = `Licenças "${procLicense}" não inventariadas — validar disponibilidade antes.`;
+      licReason = t('engine.filter.licenseContention.notInventoried', { license: procLicense });
     } else if (availCount === 0) {
       licStatus = 'fail';
-      licReason = `Zero licenças "${procLicense}" disponíveis — precisa comprar antes de alocar.`;
+      licReason = t('engine.filter.licenseContention.zero', { license: procLicense });
     } else if (procUsersNew > availCount) {
       licStatus = 'fail';
-      licReason = `Processo exige ${procUsersNew} licenças "${procLicense}", org tem ${availCount} — deficit.`;
+      licReason = t('engine.filter.licenseContention.deficit', { need: procUsersNew, license: procLicense, have: availCount });
     } else if (procUsersNew > availCount * 0.75) {
       licStatus = 'warn';
-      licReason = `Processo consome ${procUsersNew} de ${availCount} licenças "${procLicense}" — pouca folga.`;
+      licReason = t('engine.filter.licenseContention.tight', { need: procUsersNew, have: availCount, license: procLicense });
     } else {
       licStatus = 'pass';
-      licReason = `Licenças "${procLicense}" com folga: ${availCount} disponíveis, processo pede ${procUsersNew}.`;
+      licReason = t('engine.filter.licenseContention.ok', { license: procLicense, have: availCount, need: procUsersNew });
     }
   }
-  filters.push({ key: 'licenseContention', label: 'Contenção de licenças', status: licStatus, reason: licReason });
+  filters.push({ key: 'licenseContention', label: t('engine.filter.licenseContention.label'), status: licStatus, reason: licReason });
 
   // ============================================================
   // Filtro 30: historicalVelocity — cadência real vs. planejada
@@ -1105,18 +1119,18 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let velStatus, velReason;
   if (lead === 0) {
     velStatus = 'warn';
-    velReason = 'Lead-time real de release não medido — cadência declarada pode ser aspiracional.';
+    velReason = t('engine.filter.historicalVelocity.notMeasured');
   } else if (lead > procCadDays * 1.5) {
     velStatus = 'fail';
-    velReason = `Lead-time real ${lead} dias >> cadência exigida ${procCadDays} dias — org não entrega no ritmo do processo.`;
+    velReason = t('engine.filter.historicalVelocity.slow', { lead, cad: procCadDays });
   } else if (lead > procCadDays) {
     velStatus = 'warn';
-    velReason = `Lead-time real ${lead}d ligeiramente acima da cadência ${procCadDays}d — investigar gargalo.`;
+    velReason = t('engine.filter.historicalVelocity.tight', { lead, cad: procCadDays });
   } else {
     velStatus = 'pass';
-    velReason = `Lead-time real ${lead}d cabe na cadência ${procCadDays}d.`;
+    velReason = t('engine.filter.historicalVelocity.ok', { lead, cad: procCadDays });
   }
-  filters.push({ key: 'historicalVelocity', label: 'Velocidade real de release', status: velStatus, reason: velReason });
+  filters.push({ key: 'historicalVelocity', label: t('engine.filter.historicalVelocity.label'), status: velStatus, reason: velReason });
 
   // ============================================================
   // Filtro 31: testDataMask — LGPD em sandbox
@@ -1125,15 +1139,15 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let maskStatus, maskReason;
   if (!procNeedsMask) {
     maskStatus = 'pass';
-    maskReason = 'Processo não exige anonimização em sandbox.';
+    maskReason = t('engine.filter.testDataMask.none');
   } else if (!org.dataMaskEnabled) {
     maskStatus = 'fail';
-    maskReason = 'Processo LGPD-sensível exige Data Mask; org não tem habilitado — sandbox Full Copy com PII vira risco.';
+    maskReason = t('engine.filter.testDataMask.missing');
   } else {
     maskStatus = 'pass';
-    maskReason = 'Data Mask habilitado — dados sensíveis anonimizados em sandbox.';
+    maskReason = t('engine.filter.testDataMask.ok');
   }
-  filters.push({ key: 'testDataMask', label: 'Test data masking (LGPD)', status: maskStatus, reason: maskReason });
+  filters.push({ key: 'testDataMask', label: t('engine.filter.testDataMask.label'), status: maskStatus, reason: maskReason });
 
   // ============================================================
   // Filtro 32: multiLanguage — translation workbench
@@ -1147,21 +1161,21 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let langStatus, langReason;
   if (procLangs.length === 0) {
     langStatus = 'pass';
-    langReason = 'Processo não exige suporte multi-idioma.';
+    langReason = t('engine.filter.multiLanguage.none');
   } else {
     const missing = procLangs.filter(l => !orgLangs.has(l.toLowerCase()));
     if (missing.length === procLangs.length) {
       langStatus = 'fail';
-      langReason = `Nenhum idioma exigido (${procLangs.join(', ')}) ativo — translation workbench precisa configuração completa.`;
+      langReason = t('engine.filter.multiLanguage.noneActive', { list: procLangs.join(', ') });
     } else if (missing.length > 0) {
       langStatus = 'warn';
-      langReason = `Idiomas parciais. Faltando: ${missing.join(', ')}.`;
+      langReason = t('engine.filter.multiLanguage.partial', { missing: missing.join(', ') });
     } else {
       langStatus = 'pass';
-      langReason = `Idiomas ativos: ${procLangs.join(', ')}.`;
+      langReason = t('engine.filter.multiLanguage.ok', { list: procLangs.join(', ') });
     }
   }
-  filters.push({ key: 'multiLanguage', label: 'Multi-idioma', status: langStatus, reason: langReason });
+  filters.push({ key: 'multiLanguage', label: t('engine.filter.multiLanguage.label'), status: langStatus, reason: langReason });
 
   // ============================================================
   // Filtro 33: packageVersion — versão mínima exigida
@@ -1177,23 +1191,23 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   for (const [ns, minV] of Object.entries(procPkgVersionReq)) {
     const pkg = (org.installedPackages || []).find(p => p.namespace === ns);
     if (!pkg) {
-      pvIssues.push(`package "${ns}" não instalado (versão exigida ${minV})`);
+      pvIssues.push(t('engine.filter.packageVersion.notInstalled', { ns, min: minV }));
     } else if (!pkg.version) {
-      pvWarns.push(`package "${ns}" instalado mas versão não declarada`);
+      pvWarns.push(t('engine.filter.packageVersion.versionMissing', { ns }));
     } else if (compareVersion(pkg.version, minV) < 0) {
-      pvIssues.push(`package "${ns}" versão ${pkg.version} < exigida ${minV}`);
+      pvIssues.push(t('engine.filter.packageVersion.tooOld', { ns, version: pkg.version, min: minV }));
     }
   }
   if (Object.keys(procPkgVersionReq).length === 0) {
-    pvStatus = 'pass'; pvReason = 'Sem exigência de versão mínima de package.';
+    pvStatus = 'pass'; pvReason = t('engine.filter.packageVersion.none');
   } else if (pvIssues.length) {
     pvStatus = 'fail'; pvReason = pvIssues.join(' · ');
   } else if (pvWarns.length) {
     pvStatus = 'warn'; pvReason = pvWarns.join(' · ');
   } else {
-    pvStatus = 'pass'; pvReason = `Versões de package OK: ${Object.keys(procPkgVersionReq).join(', ')}.`;
+    pvStatus = 'pass'; pvReason = t('engine.filter.packageVersion.ok', { list: Object.keys(procPkgVersionReq).join(', ') });
   }
-  filters.push({ key: 'packageVersion', label: 'Versão mínima de packages', status: pvStatus, reason: pvReason });
+  filters.push({ key: 'packageVersion', label: t('engine.filter.packageVersion.label'), status: pvStatus, reason: pvReason });
 
   // ============================================================
   // Filtro 34: retentionPolicy — Field History / Big Objects
@@ -1204,27 +1218,27 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let retStatus, retReason;
   if (procRetMonths === 0 && !procNeedsBigObjects) {
     retStatus = 'pass';
-    retReason = 'Processo sem exigência específica de retenção.';
+    retReason = t('engine.filter.retentionPolicy.none');
   } else {
     const issues = [];
     if (procRetMonths > 0 && orgRetMonths < procRetMonths) {
-      issues.push(`Field History retenção ${orgRetMonths} meses < exigido ${procRetMonths}`);
+      issues.push(t('engine.filter.retentionPolicy.issue.fieldHistory', { have: orgRetMonths, need: procRetMonths }));
     }
     if (procNeedsBigObjects && !org.bigObjectsEnabled) {
-      issues.push('Big Objects necessários para arquivamento não habilitados');
+      issues.push(t('engine.filter.retentionPolicy.issue.bigObjects'));
     }
     if (issues.length === 0) {
       retStatus = 'pass';
-      retReason = `Retenção OK: FH ${orgRetMonths} meses · Big Objects ${org.bigObjectsEnabled ? 'on' : 'n/a'}.`;
+      retReason = t('engine.filter.retentionPolicy.ok', { fh: orgRetMonths, big: org.bigObjectsEnabled ? t('engine.filter.retentionPolicy.bigOn') : t('engine.filter.retentionPolicy.bigNa') });
     } else if (procRetMonths > 0 && orgRetMonths >= procRetMonths / 2) {
       retStatus = 'warn';
-      retReason = issues.join(' · ') + ' — parcial, ativação/upgrade viável.';
+      retReason = issues.join(' · ') + t('engine.filter.retentionPolicy.partialSuffix');
     } else {
       retStatus = 'fail';
       retReason = issues.join(' · ');
     }
   }
-  filters.push({ key: 'retentionPolicy', label: 'Política de retenção', status: retStatus, reason: retReason });
+  filters.push({ key: 'retentionPolicy', label: t('engine.filter.retentionPolicy.label'), status: retStatus, reason: retReason });
 
   // ============================================================
   // Filtro 35: marketingConsent — preference center unificado
@@ -1233,15 +1247,15 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let consStatus, consReason;
   if (!procNeedsConsent) {
     consStatus = 'pass';
-    consReason = 'Processo não requer consent framework.';
+    consReason = t('engine.filter.marketingConsent.none');
   } else if (!org.consentFramework) {
     consStatus = 'fail';
-    consReason = 'Processo é opt-in mas org não declara consent framework — risco LGPD/GDPR.';
+    consReason = t('engine.filter.marketingConsent.missing');
   } else {
     consStatus = 'pass';
-    consReason = `Consent framework ativo: ${org.consentFramework}.`;
+    consReason = t('engine.filter.marketingConsent.ok', { framework: org.consentFramework });
   }
-  filters.push({ key: 'marketingConsent', label: 'Consent / preference center', status: consStatus, reason: consReason });
+  filters.push({ key: 'marketingConsent', label: t('engine.filter.marketingConsent.label'), status: consStatus, reason: consReason });
 
   // ============================================================
   // Filtro 36: finopsObservability
@@ -1250,15 +1264,15 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let finStatus, finReason;
   if (!procHighConsumption) {
     finStatus = 'pass';
-    finReason = 'Processo não sinalizado como alto-consumo — observability opcional.';
+    finReason = t('engine.filter.finopsObservability.none');
   } else if (!org.finopsObservability) {
     finStatus = 'fail';
-    finReason = 'Processo alto-consumo em org sem FinOps observability — surprise bill esperado.';
+    finReason = t('engine.filter.finopsObservability.missing');
   } else {
     finStatus = 'pass';
-    finReason = 'FinOps observability ativa para monitorar consumo.';
+    finReason = t('engine.filter.finopsObservability.ok');
   }
-  filters.push({ key: 'finopsObservability', label: 'FinOps observability', status: finStatus, reason: finReason });
+  filters.push({ key: 'finopsObservability', label: t('engine.filter.finopsObservability.label'), status: finStatus, reason: finReason });
 
   // ============================================================
   // Filtro 37: sandboxCoordination — refresh coordenado
@@ -1267,15 +1281,15 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let sbcStatus, sbcReason;
   if (!procNeedsCoordinated) {
     sbcStatus = 'pass';
-    sbcReason = 'Processo não exige refresh coordenado entre sandboxes.';
+    sbcReason = t('engine.filter.sandboxCoordination.none');
   } else if (!org.sandboxRefreshCoordinated) {
     sbcStatus = 'fail';
-    sbcReason = 'Processo depende de sandbox inter-org coordenado; refresh não é coordenado hoje — CDC/PE subscriber ficará dessincronizado.';
+    sbcReason = t('engine.filter.sandboxCoordination.missing');
   } else {
     sbcStatus = 'pass';
-    sbcReason = 'Refresh de sandbox coordenado — inter-org staging alinhado.';
+    sbcReason = t('engine.filter.sandboxCoordination.ok');
   }
-  filters.push({ key: 'sandboxCoordination', label: 'Coordenação de sandbox', status: sbcStatus, reason: sbcReason });
+  filters.push({ key: 'sandboxCoordination', label: t('engine.filter.sandboxCoordination.label'), status: sbcStatus, reason: sbcReason });
 
   // ============================================================
   // Filtro 38: vendorContract — renovação/licenciamento com terceiros
@@ -1289,21 +1303,21 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let vcStatus, vcReason;
   if (procDependsVendors.length === 0) {
     vcStatus = 'pass';
-    vcReason = 'Processo não depende de contratos de vendor específicos.';
+    vcReason = t('engine.filter.vendorContract.none');
   } else {
     const risky = procDependsVendors.filter(v => expiring.has(v.toLowerCase()));
     if (risky.length === procDependsVendors.length) {
       vcStatus = 'fail';
-      vcReason = `Todos os vendors críticos (${risky.join(', ')}) têm contrato expirando — alocação depende de renovação.`;
+      vcReason = t('engine.filter.vendorContract.allExpiring', { list: risky.join(', ') });
     } else if (risky.length > 0) {
       vcStatus = 'warn';
-      vcReason = `Contratos expirando: ${risky.join(', ')} — validar renovação antes de comprometer.`;
+      vcReason = t('engine.filter.vendorContract.someExpiring', { list: risky.join(', ') });
     } else {
       vcStatus = 'pass';
-      vcReason = `Vendors dependentes com contrato vigente: ${procDependsVendors.join(', ')}.`;
+      vcReason = t('engine.filter.vendorContract.ok', { list: procDependsVendors.join(', ') });
     }
   }
-  filters.push({ key: 'vendorContract', label: 'Contratos de vendor', status: vcStatus, reason: vcReason });
+  filters.push({ key: 'vendorContract', label: t('engine.filter.vendorContract.label'), status: vcStatus, reason: vcReason });
 
   // ============================================================
   // Filtro 39: envStrategy — canary/feature flag conflict
@@ -1313,18 +1327,18 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let envStatus, envReason;
   if (!procUsesCanary) {
     envStatus = 'pass';
-    envReason = 'Processo sem exigência de canary/feature-flag.';
+    envReason = t('engine.filter.envStrategy.none');
   } else if (!orgEnv) {
     envStatus = 'warn';
-    envReason = 'Processo exige canary release; estratégia de ambiente da org não declarada.';
+    envReason = t('engine.filter.envStrategy.orgUndeclared');
   } else if (orgEnv === 'prod-only' || orgEnv === 'bigbang') {
     envStatus = 'fail';
-    envReason = `Org é "${orgEnv}"; processo exige canary — sem staging + rollout controlado.`;
+    envReason = t('engine.filter.envStrategy.incompatible', { env: orgEnv });
   } else {
     envStatus = 'pass';
-    envReason = `Env strategy compatível: ${orgEnv}.`;
+    envReason = t('engine.filter.envStrategy.ok', { env: orgEnv });
   }
-  filters.push({ key: 'envStrategy', label: 'Environment strategy', status: envStatus, reason: envReason });
+  filters.push({ key: 'envStrategy', label: t('engine.filter.envStrategy.label'), status: envStatus, reason: envReason });
 
   // ============================================================
   // Filtro 40: growthTrend — degradação projetada 12mo
@@ -1333,21 +1347,21 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let grStatus, grReason;
   if (growth === 0) {
     grStatus = 'warn';
-    grReason = 'Crescimento mensal de storage não medido — impossível projetar 12mo.';
+    grReason = t('engine.filter.growthTrend.notMeasured');
   } else {
     const proj12mo = (org.storagePct || 0) + growth * 12;
     if (proj12mo >= 100) {
       grStatus = 'fail';
-      grReason = `Sem alocar o processo, storage estoura em <12mo (proj ${Math.round(proj12mo)}% em 12mo · crescimento ${growth}%/mês).`;
+      grReason = t('engine.filter.growthTrend.overflow', { proj: Math.round(proj12mo), growth });
     } else if (proj12mo >= 85) {
       grStatus = 'warn';
-      grReason = `Crescimento coloca org perto do teto em 12mo (proj ${Math.round(proj12mo)}%).`;
+      grReason = t('engine.filter.growthTrend.nearCap', { proj: Math.round(proj12mo) });
     } else {
       grStatus = 'pass';
-      grReason = `Crescimento sustentável: proj ${Math.round(proj12mo)}% em 12mo.`;
+      grReason = t('engine.filter.growthTrend.ok', { proj: Math.round(proj12mo) });
     }
   }
-  filters.push({ key: 'growthTrend', label: 'Tendência de crescimento (12mo)', status: grStatus, reason: grReason });
+  filters.push({ key: 'growthTrend', label: t('engine.filter.growthTrend.label'), status: grStatus, reason: grReason });
 
   // ============================================================
   // Filtro 41: metadataComplexity — count de custom fields, apex, roles, sharing, triggers, flows, permsets, territory
@@ -1371,18 +1385,27 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     return score;
   })();
   let complexityStatus, complexityReason;
-  const detail = `cf ${org.customFieldCount||0} · apex ${org.apexClassCount||0} · roles ${org.userRoleCount||0} · sharing ${org.sharingRuleCount||0} · territory ${org.territoryModelCount||0} · permsets ${org.permSetCount||0} · triggers ${org.triggerCount||0} · flows ${org.flowCount||0}`;
+  const detail = t('engine.filter.metadataComplexity.detail', {
+    cf: org.customFieldCount || 0,
+    apex: org.apexClassCount || 0,
+    roles: org.userRoleCount || 0,
+    sharing: org.sharingRuleCount || 0,
+    territory: org.territoryModelCount || 0,
+    permsets: org.permSetCount || 0,
+    triggers: org.triggerCount || 0,
+    flows: org.flowCount || 0
+  });
   if (complexityScore >= 8) {
     complexityStatus = 'fail';
-    complexityReason = `Metadata complexity elevada (score ${complexityScore}): ${detail}. Refactor obrigatório antes de acomodar novo processo.`;
+    complexityReason = t('engine.filter.metadataComplexity.high', { score: complexityScore, detail });
   } else if (complexityScore >= 4) {
     complexityStatus = 'warn';
-    complexityReason = `Metadata complexity moderada (score ${complexityScore}): ${detail}. Cuidado ao adicionar mais.`;
+    complexityReason = t('engine.filter.metadataComplexity.moderate', { score: complexityScore, detail });
   } else {
     complexityStatus = 'pass';
-    complexityReason = `Metadata complexity saudável (score ${complexityScore}): ${detail}.`;
+    complexityReason = t('engine.filter.metadataComplexity.ok', { score: complexityScore, detail });
   }
-  filters.push({ key: 'metadataComplexity', label: 'Complexidade de metadata', status: complexityStatus, reason: complexityReason });
+  filters.push({ key: 'metadataComplexity', label: t('engine.filter.metadataComplexity.label'), status: complexityStatus, reason: complexityReason });
 
   // ============================================================
   // Filtro 42: adminHygiene — Modify All Data espalhado
@@ -1392,18 +1415,18 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   let adminStatus, adminReason;
   if (mad === 0 && madU === 0) {
     adminStatus = 'warn';
-    adminReason = 'Hygiene de admin não medida — validar quantos permsets/users têm ModifyAllData.';
+    adminReason = t('engine.filter.adminHygiene.notMeasured');
   } else if (mad > 10 || madU > 30) {
     adminStatus = 'fail';
-    adminReason = `Modify All Data espalhado: ${mad} permsets · ${madU} users. Segregation of duties comprometida — refactor antes de acomodar processo SOX/PCI.`;
+    adminReason = t('engine.filter.adminHygiene.spread', { perm: mad, users: madU });
   } else if (mad > 5 || madU > 15) {
     adminStatus = 'warn';
-    adminReason = `Modify All Data com espalhamento moderado: ${mad} permsets · ${madU} users.`;
+    adminReason = t('engine.filter.adminHygiene.moderate', { perm: mad, users: madU });
   } else {
     adminStatus = 'pass';
-    adminReason = `Modify All Data controlado: ${mad} permsets · ${madU} users.`;
+    adminReason = t('engine.filter.adminHygiene.ok', { perm: mad, users: madU });
   }
-  filters.push({ key: 'adminHygiene', label: 'Hygiene de admin (ModifyAllData)', status: adminStatus, reason: adminReason });
+  filters.push({ key: 'adminHygiene', label: t('engine.filter.adminHygiene.label'), status: adminStatus, reason: adminReason });
 
   const failCount = filters.filter(f => f.status === 'fail').length;
   const warnCount = filters.filter(f => f.status === 'warn').length;
@@ -1465,8 +1488,8 @@ export function analyzeLandscape(evaluations, proc) {
       if (sameRegulator && sameController && sameModel && combinedFits) {
         consolidations.push({
           orgs: [a.orgName, b.orgName],
-          rationale: `mesmo regulador (${a.regulator}), mesmo data controller e mesmo data model (${a.dataModel}); capacidade agregada storage ${combinedStoragePct}% / API ${combinedApiPct}% / objs ${combinedObjPct}% — cabem em uma`,
-          savingsEstimate: `elimina 1 Full Copy, 1 Shield replicado, ~US$${(a.addonRunCostMonthly || 5000).toLocaleString()}/mês`
+          rationale: t('engine.consolidation.rationale', { regulator: a.regulator, model: a.dataModel, storage: combinedStoragePct, api: combinedApiPct, objs: combinedObjPct }),
+          savingsEstimate: t('engine.consolidation.savings', { amount: (a.addonRunCostMonthly || 5000).toLocaleString() })
         });
       }
     }
@@ -1487,7 +1510,7 @@ export function analyzeLandscape(evaluations, proc) {
       rebalancing.push({
         heavy: heavy.orgName,
         light: compatibleLight.orgName,
-        rationale: `${heavy.orgName} está apertada (storage ${heavy.storagePct||0}% / API ${heavy.apiUsagePct||0}% / PE ${heavy.platformEventUsagePct||0}%); ${compatibleLight.orgName} tem folga e é compatível — considere migrar processos antes de alocar o novo`
+        rationale: t('engine.rebalancing.rationale', { heavy: heavy.orgName, storage: heavy.storagePct || 0, api: heavy.apiUsagePct || 0, pe: heavy.platformEventUsagePct || 0, light: compatibleLight.orgName })
       });
     }
   }
@@ -1504,26 +1527,26 @@ export function analyzeLandscape(evaluations, proc) {
   const procCrit = (proc.criticality || 'medium').toLowerCase();
   if (proc.regulator && proc.regulator !== 'NONE' && !anyOrgSameRegulator) {
     newOrgRationale.push({
-      criterion: 'regulator inédito',
-      detail: `Nenhuma org do landscape opera sob ${proc.regulator}. Alocar num regulator diferente contamina perímetro de compliance.`
+      criterion: t('engine.newOrg.criterion.regulatorInedito'),
+      detail: t('engine.newOrg.detail.regulatorInedito', { reg: proc.regulator })
     });
   }
   if (proc.dataController === 'DIFFERENT') {
     newOrgRationale.push({
-      criterion: 'data controller distinto',
-      detail: 'Data controller diferente sem contrato inter-partes viola LGPD. Nova org é o único caminho compliant.'
+      criterion: t('engine.newOrg.criterion.controllerDistinct'),
+      detail: t('engine.newOrg.detail.controllerDistinct')
     });
   }
   if (proc.dataModel === 'personAccount' && !orgs.some(o => o.hasPersonAccount)) {
     newOrgRationale.push({
-      criterion: 'Person Account inédito',
-      detail: 'Nenhuma org do landscape tem Person Account. Habilitar em org existente é decisão irreversível — pode conflitar com processos B2B já presentes.'
+      criterion: t('engine.newOrg.criterion.personAccountInedito'),
+      detail: t('engine.newOrg.detail.personAccountInedito')
     });
   }
   if (procCrit === 'critical' && passing.length === 0 && warning.filter(w => w.warnCount <= 3).length === 0) {
     newOrgRationale.push({
-      criterion: 'processo crítico + landscape saturado',
-      detail: 'Criticalidade crítica e nenhuma org do landscape suporta com <3 warnings. Custo de acomodar em org existente pode ser maior que o custo de nova org com plano de sunset.'
+      criterion: t('engine.newOrg.criterion.criticalSaturated'),
+      detail: t('engine.newOrg.detail.criticalSaturated')
     });
   }
 
@@ -1532,23 +1555,24 @@ export function analyzeLandscape(evaluations, proc) {
   if (newOrgRationale.length > 0) {
     recommendation = 'new-org';
     primaryChoice = null;
-    summary = `Nova org é a escolha correta — não como fallback, mas por critério estruturado: ${newOrgRationale.map(r => r.criterion).join(', ')}.`;
+    summary = t('engine.landscape.summary.newOrg', { criteria: newOrgRationale.map(r => r.criterion).join(', ') });
   } else if (consolidations.length > 0 && passing.length === 0) {
     recommendation = 'consolidate-first';
     primaryChoice = consolidations[0].orgs;
-    summary = `Antes de alocar o processo, consolide ${consolidations[0].orgs.join(' + ')} — cabem numa só e liberam custo/capacidade. Depois reavalie.`;
+    summary = t('engine.landscape.summary.consolidateFirst', { orgs: consolidations[0].orgs.join(' + ') });
   } else if (passing.length > 0) {
     recommendation = 'reuse';
     primaryChoice = passing[0].org.orgName;
-    summary = `Aloque em ${passing[0].org.orgName} — passa em todos os filtros com score ${passing[0].score}${passing.length > 1 ? `; ${passing.length - 1} alternativa(s) elegível(is)` : ''}.`;
+    const altSuffix = passing.length > 1 ? t('engine.landscape.summary.reuseAltSuffix', { n: passing.length - 1 }) : '';
+    summary = t('engine.landscape.summary.reuse', { org: passing[0].org.orgName, score: passing[0].score, suffix: altSuffix });
   } else if (warning.length > 0) {
     recommendation = 'reuse-with-warnings';
     primaryChoice = warning[0].org.orgName;
-    summary = `Nenhuma org passa 100%. Melhor candidata: ${warning[0].org.orgName} (${warning[0].warnCount} warnings). Resolva warnings ou considere alternativas técnicas.`;
+    summary = t('engine.landscape.summary.reuseWithWarnings', { org: warning[0].org.orgName, warnings: warning[0].warnCount });
   } else {
     recommendation = 'no-viable-option';
     primaryChoice = null;
-    summary = 'Todas as candidatas têm bloqueadores hard. Exaure alternativas técnicas (Data Cloud, 2GP, Experience Cloud, MuleSoft, shared services) antes de criar nova org.';
+    summary = t('engine.landscape.summary.noViable');
   }
 
   return {

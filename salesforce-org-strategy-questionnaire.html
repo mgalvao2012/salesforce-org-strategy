@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Salesforce Multi-Org Strategy — Decisão Arquitetural</title>
+<title data-i18n="app.title">Salesforce Multi-Org Strategy — Decisão Arquitetural</title>
 <style>
   :root {
     --bg: #f4f6fa;
@@ -173,6 +173,13 @@
   .evidence { font-size: 12px; color: var(--ink-soft); margin-top: 6px; padding: 8px 10px;
     background: #f8fbfe; border-left: 2px solid var(--brand); border-radius: 0 4px 4px 0; }
   .evidence strong { color: var(--ink); }
+  .lang-switcher { display: inline-flex; gap: 4px; background: #eaf1f8; padding: 3px; border-radius: 999px;
+    margin-top: 12px; }
+  .lang-btn { font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+    padding: 5px 12px; border: none; background: transparent; color: var(--ink-soft); border-radius: 999px;
+    cursor: pointer; transition: all 0.15s; }
+  .lang-btn:hover:not(.active) { color: var(--ink); }
+  .lang-btn.active { background: var(--brand); color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
   .mode-tabs { display: flex; gap: 4px; background: #eaf1f8; padding: 4px; border-radius: 8px;
     margin-top: 16px; }
   .mode-tab { flex: 1; padding: 10px 14px; font-size: 13px; font-weight: 600; text-align: center;
@@ -268,117 +275,122 @@
 <body>
 <div class="container">
   <header>
-    <h1>Salesforce Multi-Org Strategy</h1>
-    <p>Ferramenta de apoio à decisão arquitetural para landscapes com múltiplas orgs — de 2 a dezenas.</p>
+    <h1 data-i18n="app.heading">Salesforce Multi-Org Strategy</h1>
+    <p data-i18n="app.subheading">Ferramenta de apoio à decisão arquitetural para landscapes com múltiplas orgs — de 2 a dezenas.</p>
+    <div class="lang-switcher" role="radiogroup" aria-label="Idioma">
+      <button type="button" class="lang-btn" data-lang="pt-BR">PT</button>
+      <button type="button" class="lang-btn" data-lang="en-US">EN</button>
+      <button type="button" class="lang-btn" data-lang="es-ES">ES</button>
+    </div>
     <div class="mode-tabs" role="tablist">
       <button type="button" class="mode-tab active" data-mode="topology" role="tab">
-        Modo Topologia
-        <div class="mode-tab-desc">Single vs Multi (Hub / Federated) — decisão greenfield</div>
+        <span data-i18n="mode.topology.title">Modo Topologia</span>
+        <div class="mode-tab-desc" data-i18n="mode.topology.desc">Single vs Multi (Hub / Federated) — decisão greenfield</div>
       </button>
       <button type="button" class="mode-tab" data-mode="allocation" role="tab">
-        Modo Alocação
-        <div class="mode-tab-desc">Landscape existente: onde alocar novo processo</div>
+        <span data-i18n="mode.allocation.title">Modo Alocação</span>
+        <div class="mode-tab-desc" data-i18n="mode.allocation.desc">Landscape existente: onde alocar novo processo</div>
       </button>
     </div>
   </header>
 
   <details class="card metadata-card" id="metadataCard">
-    <summary>Tem acesso à(s) org(s)? Carregue metadata para pré-preencher perguntas (opcional)</summary>
+    <summary data-i18n="metadata.summary">Tem acesso à(s) org(s)? Carregue metadata para pré-preencher perguntas (opcional)</summary>
     <div class="metadata-body">
-      <p>Cada org é descrita por <strong>um único arquivo JSON</strong> carregado abaixo. O motor tem 45 filtros e cada um lê campos específicos desse JSON. Você monta esse arquivo por <strong>um destes dois caminhos, mutuamente exclusivos</strong>:</p>
+      <p data-i18n-html="metadata.intro">Cada org é descrita por <strong>um único arquivo JSON</strong> carregado abaixo. O motor tem 45 filtros e cada um lê campos específicos desse JSON. Você monta esse arquivo por <strong>um destes dois caminhos, mutuamente exclusivos</strong>:</p>
 
       <div class="path-grid">
         <div class="path-card path-a">
-          <div class="path-tag">Caminho A</div>
-          <div class="path-title">Semi-automático (recomendado)</div>
-          <div class="path-desc">Você tem acesso à org via <code>sf</code> CLI. Um script preenche os campos técnicos (~50 campos); um segundo arquivo humano complementa o que só a área conhece (~40 campos).</div>
-          <div class="path-req">Pré-requisitos: <code>sf</code> CLI + <code>jq</code>, acesso ao script <code>extract-org-metadata.sh</code>.</div>
+          <div class="path-tag" data-i18n="metadata.pathA.tag">Caminho A</div>
+          <div class="path-title" data-i18n="metadata.pathA.title">Semi-automático (recomendado)</div>
+          <div class="path-desc" data-i18n-html="metadata.pathA.desc">Você tem acesso à org via <code>sf</code> CLI. Um script preenche os campos técnicos (~50 campos); um segundo arquivo humano complementa o que só a área conhece (~40 campos).</div>
+          <div class="path-req" data-i18n-html="metadata.pathA.req">Pré-requisitos: <code>sf</code> CLI + <code>jq</code>, acesso ao script <code>extract-org-metadata.sh</code>.</div>
         </div>
         <div class="path-card path-b">
-          <div class="path-tag">Caminho B</div>
-          <div class="path-title">100% manual</div>
-          <div class="path-desc">Você não tem acesso à org (ou não quer usar <code>sf</code> CLI). Monta o JSON inteiro à mão a partir do que a área/PMO/ARB conhecem.</div>
-          <div class="path-req">Pré-requisitos: nenhum. Editor de texto + o schema abaixo.</div>
+          <div class="path-tag" data-i18n="metadata.pathB.tag">Caminho B</div>
+          <div class="path-title" data-i18n="metadata.pathB.title">100% manual</div>
+          <div class="path-desc" data-i18n-html="metadata.pathB.desc">Você não tem acesso à org (ou não quer usar <code>sf</code> CLI). Monta o JSON inteiro à mão a partir do que a área/PMO/ARB conhecem.</div>
+          <div class="path-req" data-i18n="metadata.pathB.req">Pré-requisitos: nenhum. Editor de texto + o schema abaixo.</div>
         </div>
       </div>
 
-      <p class="metadata-note"><strong>Não é obrigatório carregar nada.</strong> O questionário no <em>modo Topologia</em> funciona 100% sem JSON. Só o <em>modo Alocação</em> exige.</p>
+      <p class="metadata-note" data-i18n-html="metadata.optional"><strong>Não é obrigatório carregar nada.</strong> O questionário no <em>modo Topologia</em> funciona 100% sem JSON. Só o <em>modo Alocação</em> exige.</p>
 
       <details class="instructions">
-        <summary>Caminho A — Semi-automático (sf CLI + complemento humano)</summary>
+        <summary data-i18n="metadata.pathA.detailsSummary">Caminho A — Semi-automático (sf CLI + complemento humano)</summary>
         <div class="instructions-body">
-          <p>O JSON final é a fusão de duas fontes:</p>
+          <p data-i18n="metadata.pathA.intro">O JSON final é a fusão de duas fontes:</p>
           <table class="path-table">
-            <thead><tr><th>Fonte</th><th>O que preenche</th><th>Como gera</th></tr></thead>
+            <thead><tr><th data-i18n="metadata.pathA.tableSource">Fonte</th><th data-i18n="metadata.pathA.tableFills">O que preenche</th><th data-i18n="metadata.pathA.tableHow">Como gera</th></tr></thead>
             <tbody>
               <tr>
-                <td><code>MinhaOrg.json</code> <em>(output do script)</em></td>
-                <td>Métricas técnicas: metadata counts, limits, PermissionSetLicense, sandboxes, installed packages, platform events, connected apps (~50 campos).</td>
-                <td><code>./extract-org-metadata.sh MinhaOrg MinhaOrg.json</code></td>
+                <td data-i18n-html="metadata.pathA.row1.source"><code>MinhaOrg.json</code> <em>(output do script)</em></td>
+                <td data-i18n="metadata.pathA.row1.fills">Métricas técnicas: metadata counts, limits, PermissionSetLicense, sandboxes, installed packages, platform events, connected apps (~50 campos).</td>
+                <td data-i18n-html="metadata.pathA.row1.how"><code>./extract-org-metadata.sh MinhaOrg MinhaOrg.json</code></td>
               </tr>
               <tr>
-                <td><code>MinhaOrg.manual.json</code> <em>(complemento humano)</em></td>
-                <td>O que <strong>não</strong> sai da CLI: regulator, LGPD data controller, LOB, ApexGuru, MDM, backup/DR, team, contratos, custo, retenção (~40 campos).</td>
-                <td>Copiar <code>org-metadata.manual.template.json</code>, renomear e editar.</td>
+                <td data-i18n-html="metadata.pathA.row2.source"><code>MinhaOrg.manual.json</code> <em>(complemento humano)</em></td>
+                <td data-i18n-html="metadata.pathA.row2.fills">O que <strong>não</strong> sai da CLI: regulator, LGPD data controller, LOB, ApexGuru, MDM, backup/DR, team, contratos, custo, retenção (~40 campos).</td>
+                <td data-i18n-html="metadata.pathA.row2.how">Copiar <code>org-metadata.manual.template.json</code>, renomear e editar.</td>
               </tr>
             </tbody>
           </table>
-          <p>O script <strong>funde os dois automaticamente</strong> ao final: <code>MinhaOrg.manual.json</code> tem prioridade e sobrescreve qualquer campo do script. Você só precisa carregar <strong>o <code>.json</code> final</strong> aqui, não o <code>.manual.json</code>.</p>
+          <p data-i18n-html="metadata.pathA.merge">O script <strong>funde os dois automaticamente</strong> ao final: <code>MinhaOrg.manual.json</code> tem prioridade e sobrescreve qualquer campo do script. Você só precisa carregar <strong>o <code>.json</code> final</strong> aqui, não o <code>.manual.json</code>.</p>
 
-          <p class="req"><strong>Instalação dos pré-requisitos:</strong></p>
+          <p class="req" data-i18n-html="metadata.pathA.prereqs"><strong>Instalação dos pré-requisitos:</strong></p>
           <pre><button class="copy-btn" data-copy="brew install salesforce-cli jq">Copiar</button><code>brew install salesforce-cli jq</code></pre>
 
-          <p class="req"><strong>Passo-a-passo:</strong></p>
+          <p class="req" data-i18n-html="metadata.pathA.steps"><strong>Passo-a-passo:</strong></p>
           <ol>
             <li>
-              <strong>Autenticar</strong> (para sandbox: adicione <code>-r https://test.salesforce.com</code>).
+              <span data-i18n-html="metadata.pathA.step1"><strong>Autenticar</strong> (para sandbox: adicione <code>-r https://test.salesforce.com</code>).</span>
               <pre><button class="copy-btn" data-copy="sf org login web -a MinhaOrg">Copiar</button><code>sf org login web -a MinhaOrg</code></pre>
             </li>
             <li>
-              <strong>Confirmar que está apontando pra org certa</strong> antes de extrair.
+              <span data-i18n-html="metadata.pathA.step2"><strong>Confirmar que está apontando pra org certa</strong> antes de extrair.</span>
               <pre><button class="copy-btn" data-copy="sf org display -o MinhaOrg">Copiar</button><code>sf org display -o MinhaOrg</code></pre>
             </li>
             <li>
-              <strong>Preparar o complemento humano</strong> — copie o template e edite. Deixe vazios os campos que não conhecer; eles caem em WARN, não FAIL.
+              <span data-i18n-html="metadata.pathA.step3"><strong>Preparar o complemento humano</strong> — copie o template e edite. Deixe vazios os campos que não conhecer; eles caem em WARN, não FAIL.</span>
               <pre><button class="copy-btn" data-copy="cp org-metadata.manual.template.json MinhaOrg.manual.json">Copiar</button><code>cp org-metadata.manual.template.json MinhaOrg.manual.json</code></pre>
             </li>
             <li>
-              <strong>Rodar o script</strong> — extrai da org e funde com <code>MinhaOrg.manual.json</code> se existir. Leva 1-5min.
+              <span data-i18n-html="metadata.pathA.step4"><strong>Rodar o script</strong> — extrai da org e funde com <code>MinhaOrg.manual.json</code> se existir. Leva 1-5min.</span>
               <pre><button class="copy-btn" data-copy="chmod +x extract-org-metadata.sh
 ./extract-org-metadata.sh MinhaOrg MinhaOrg.json">Copiar</button><code>chmod +x extract-org-metadata.sh
 ./extract-org-metadata.sh MinhaOrg MinhaOrg.json</code></pre>
             </li>
-            <li>
+            <li data-i18n-html="metadata.pathA.step5">
               <strong>Multi-org:</strong> repita 1-4 para cada org; carregue todos os <code>.json</code> finais abaixo.
             </li>
-            <li>
+            <li data-i18n-html="metadata.pathA.step6">
               <strong>Carregar</strong> o <code>MinhaOrg.json</code> em "Selecionar JSON(s) de org" no final desta seção.
             </li>
           </ol>
 
-          <div class="warn-tip">
+          <div class="warn-tip" data-i18n-html="metadata.pathA.warn1">
             <strong>Sem <code>MinhaOrg.manual.json</code>:</strong> o script roda mesmo assim, mas os filtros do modo Alocação que dependem de dados humanos (regulator, LGPD, ApexGuru, backup, team, MDM, contratos) ficam em WARN. Um aviso explícito é impresso ao final. É legítimo rodar assim para preview técnico, mas para decisão final o complemento humano é o que dá poder ao motor.
           </div>
 
-          <div class="warn-tip">
+          <div class="warn-tip" data-i18n-html="metadata.pathA.warn2">
             <strong>Se o script falhar:</strong> <code>bash -x ./extract-org-metadata.sh MinhaOrg MinhaOrg.json 2&gt;&amp;1 | tail -40</code>. Causas comuns: usuário sem Tooling API, org sem Package2, sandbox onde <code>SandboxInfo</code> não é consultável.
           </div>
         </div>
       </details>
 
       <details class="instructions">
-        <summary>Caminho B — 100% manual (sem sf CLI)</summary>
+        <summary data-i18n="metadata.pathB.detailsSummary">Caminho B — 100% manual (sem sf CLI)</summary>
         <div class="instructions-body">
-          <p>Sem acesso à CLI, você monta <strong>um arquivo <code>.json</code> por org</strong> com os dados que a área/PMO/ARB conhecem. Não use o script nem o template do complemento; use o <em>schema unificado</em> abaixo como base.</p>
+          <p data-i18n-html="metadata.pathB.intro">Sem acesso à CLI, você monta <strong>um arquivo <code>.json</code> por org</strong> com os dados que a área/PMO/ARB conhecem. Não use o script nem o template do complemento; use o <em>schema unificado</em> abaixo como base.</p>
 
-          <p class="req"><strong>Passo-a-passo:</strong></p>
+          <p class="req" data-i18n-html="metadata.pathB.steps"><strong>Passo-a-passo:</strong></p>
           <ol>
-            <li>Copie o <strong>exemplo mínimo</strong> abaixo e salve como <code>MinhaOrg.json</code>.</li>
-            <li>Ajuste os valores. Consulte a tabela <em>Schema completo por bloco</em> abaixo para adicionar mais campos.</li>
-            <li>Carregue o arquivo em "Selecionar JSON(s) de org".</li>
+            <li data-i18n-html="metadata.pathB.step1">Copie o <strong>exemplo mínimo</strong> abaixo e salve como <code>MinhaOrg.json</code>.</li>
+            <li data-i18n-html="metadata.pathB.step2">Ajuste os valores. Consulte a tabela <em>Schema completo por bloco</em> abaixo para adicionar mais campos.</li>
+            <li data-i18n-html="metadata.pathB.step3">Carregue o arquivo em "Selecionar JSON(s) de org".</li>
           </ol>
 
-          <p class="req"><strong>Exemplo mínimo funcional</strong> — funciona para o modo Alocação, mas gera muitos WARN por causa dos campos não declarados. Todos os campos abaixo são <em>obrigatórios apenas se você quer PASS</em> nos filtros que os consomem.</p>
+          <p class="req" data-i18n-html="metadata.pathB.minExample"><strong>Exemplo mínimo funcional</strong> — funciona para o modo Alocação, mas gera muitos WARN por causa dos campos não declarados. Todos os campos abaixo são <em>obrigatórios apenas se você quer PASS</em> nos filtros que os consomem.</p>
           <pre><button class="copy-btn" data-copy-target="manualJsonMin">Copiar</button><code id="manualJsonMin">{
   "orgName": "MinhaOrg",
   "edition": "Enterprise",
@@ -397,119 +409,119 @@
   "supportTier": "premier"
 }</code></pre>
 
-          <div class="warn-tip">
+          <div class="warn-tip" data-i18n-html="metadata.pathB.rule">
             <strong>Regra de ouro:</strong> cada campo omitido vira WARN no filtro que o consome, nunca PASS silencioso. Se estiver em dúvida se sabe o valor, deixe o campo fora — a diagnose fica correta.
           </div>
         </div>
       </details>
 
       <details class="instructions">
-        <summary>Schema completo — todos os campos que o motor consome, agrupados por bloco</summary>
+        <summary data-i18n="metadata.schema.summary">Schema completo — todos os campos que o motor consome, agrupados por bloco</summary>
         <div class="instructions-body">
-          <p>Referência única, usada nos <strong>dois caminhos</strong>. Cada bloco corresponde a uma seção do formulário do processo e alimenta um grupo de filtros. Em <em>Caminho A</em>, "coleta técnica" = script; "complemento humano" = <code>.manual.json</code>. Em <em>Caminho B</em>, tudo é escrito à mão no mesmo arquivo.</p>
+          <p data-i18n-html="metadata.schema.intro">Referência única, usada nos <strong>dois caminhos</strong>. Cada bloco corresponde a uma seção do formulário do processo e alimenta um grupo de filtros. Em <em>Caminho A</em>, "coleta técnica" = script; "complemento humano" = <code>.manual.json</code>. Em <em>Caminho B</em>, tudo é escrito à mão no mesmo arquivo.</p>
 
           <table class="schema-table">
-            <thead><tr><th style="width:26%">Bloco</th><th style="width:37%">Coleta técnica (script)</th><th style="width:37%">Complemento humano</th></tr></thead>
+            <thead><tr><th style="width:26%" data-i18n="metadata.schema.colBlock">Bloco</th><th style="width:37%" data-i18n="metadata.schema.colTechnical">Coleta técnica (script)</th><th style="width:37%" data-i18n="metadata.schema.colHuman">Complemento humano</th></tr></thead>
             <tbody>
               <tr>
-                <td>Identificação</td>
+                <td data-i18n="metadata.schema.block.identification">Identificação</td>
                 <td><code>orgName</code>, <code>edition</code>, <code>podRegion</code>, <code>timezone</code>, <code>locale</code>, <code>activeLanguages</code></td>
                 <td><code>lobOwner</code>, <code>orgType</code></td>
               </tr>
               <tr>
-                <td>Regulatório / LGPD</td>
+                <td data-i18n="metadata.schema.block.regulatory">Regulatório / LGPD</td>
                 <td>—</td>
                 <td><code>regulator</code>, <code>dataControllerLGPD</code>, <code>pciInScope</code>, <code>soxScope</code>, <code>consentFramework</code></td>
               </tr>
               <tr>
-                <td>Data model / MDM</td>
+                <td data-i18n="metadata.schema.block.dataModel">Data model / MDM</td>
                 <td><code>hasPersonAccount</code>, <code>isMultiCurrency</code>, <code>sharingModel</code>, <code>roleHierarchyDepth</code></td>
                 <td><code>dataModel</code>, <code>sharedCustomerBases</code>, <code>masterDataOwnerFor</code>, <code>masterDataConsumerOf</code></td>
               </tr>
               <tr>
-                <td>Capacidade / metadata</td>
+                <td data-i18n="metadata.schema.block.capacity">Capacidade / metadata</td>
                 <td><code>customObjectCount</code>, <code>customFieldCount</code>, <code>apexClassCount</code>, <code>userRoleCount</code>, <code>territoryModelCount</code>, <code>sharingRuleCount</code>, <code>triggerCount</code>, <code>flowCount</code>, <code>permSetCount</code>, <code>storagePct</code>, <code>apiUsagePct</code>, <code>customObjectLimitPct</code></td>
                 <td><code>storageGrowthPctPerMonth</code></td>
               </tr>
               <tr>
-                <td>Concorrência</td>
+                <td data-i18n="metadata.schema.block.concurrency">Concorrência</td>
                 <td><code>concurrentApiUsagePct</code>, <code>concurrentApiLimit</code>, <code>streamingClientsPct</code>, <code>bulkJobsDailyPct</code>, <code>concurrentLongRunningPct</code>, <code>futureQueuePendingPct</code></td>
                 <td><code>queueableDepthUsed</code></td>
               </tr>
               <tr>
-                <td>Features / add-ons</td>
+                <td data-i18n="metadata.schema.block.features">Features / add-ons</td>
                 <td><code>shieldEnabled</code>, <code>dataCloudEnabled</code>, <code>agentforceEnabled</code>, <code>eventMonitoringEnabled</code>, <code>fatEnabled</code>, <code>experienceCloudEnabled</code>, <code>availableLicenses</code>, <code>connectedTenants</code></td>
                 <td>—</td>
               </tr>
               <tr>
-                <td>Segurança / admin</td>
+                <td data-i18n="metadata.schema.block.security">Segurança / admin</td>
                 <td><code>modifyAllPermSets</code>, <code>modifyAllUserCount</code></td>
                 <td>—</td>
               </tr>
               <tr>
-                <td>Release / DevOps</td>
+                <td data-i18n="metadata.schema.block.devops">Release / DevOps</td>
                 <td>—</td>
                 <td><code>releaseSchedule</code>, <code>releaseLeadTimeDays</code>, <code>envStrategy</code>, <code>sandboxRefreshCoordinated</code>, <code>dataMaskEnabled</code></td>
               </tr>
               <tr>
-                <td>Sandboxes</td>
+                <td data-i18n="metadata.schema.block.sandboxes">Sandboxes</td>
                 <td><code>fullCopySandboxes</code>, <code>partialCopySandboxes</code>, <code>developerSandboxes</code>, <code>lastSandboxRefresh</code></td>
                 <td>—</td>
               </tr>
               <tr>
-                <td>Platform Events / CDC</td>
+                <td data-i18n="metadata.schema.block.events">Platform Events / CDC</td>
                 <td><code>platformEventUsagePct</code>, <code>platformEventDailyLimit</code>, <code>hvpeEnabled</code>, <code>platformEventPublishedTypes</code>, <code>cdcEnabledEntities</code></td>
                 <td><code>publishedContracts</code>, <code>consumedContracts</code>, <code>pubSubApiEnabled</code></td>
               </tr>
               <tr>
-                <td>Integrações externas</td>
+                <td data-i18n="metadata.schema.block.integrations">Integrações externas</td>
                 <td>—</td>
                 <td><code>externalFeeds</code>, <code>vendorContractsExpiring</code>, <code>interOrgLatencyMsP95</code></td>
               </tr>
               <tr>
-                <td>Packages</td>
+                <td data-i18n="metadata.schema.block.packages">Packages</td>
                 <td><code>installedPackages[].namespace</code>, <code>installedPackages[].name</code>, <code>installedPackages[].version</code>, <code>installedPackageCount</code>, <code>package2Count</code></td>
                 <td><code>installedPackages[].licenseType</code>, <code>installedPackages[].allowsExtension</code></td>
               </tr>
               <tr>
-                <td>ApexGuru</td>
+                <td data-i18n="metadata.schema.block.apexGuru">ApexGuru</td>
                 <td>—</td>
                 <td><code>apexGuruCriticalIssues</code>, <code>apexGuruSoqlNonSelective</code>, <code>apexGuruLongRunningApex</code>, <code>apexGuruGovernorExceptions</code>, <code>apexGuruTrend</code>, <code>apexGuruLastRun</code>, <code>apexGuruTopOffenders</code></td>
               </tr>
               <tr>
-                <td>Backup / DR</td>
+                <td data-i18n="metadata.schema.block.backup">Backup / DR</td>
                 <td>—</td>
                 <td><code>backupProvider</code>, <code>backupFrequency</code>, <code>rtoHours</code>, <code>rpoHours</code></td>
               </tr>
               <tr>
-                <td>Team / capacity</td>
+                <td data-i18n="metadata.schema.block.team">Team / capacity</td>
                 <td>—</td>
                 <td><code>teamHeadcount</code>, <code>teamUtilizationPct</code>, <code>teamSkills</code></td>
               </tr>
               <tr>
-                <td>Support / operações</td>
+                <td data-i18n="metadata.schema.block.support">Support / operações</td>
                 <td>—</td>
                 <td><code>supportTier</code>, <code>incidentsLast12mo</code>, <code>uptimePct</code>, <code>documentationScore</code></td>
               </tr>
               <tr>
-                <td>UX overhead</td>
+                <td data-i18n="metadata.schema.block.uxOverhead">UX overhead</td>
                 <td>—</td>
                 <td><code>tabCount</code>, <code>layoutCount</code>, <code>recordTypeCount</code></td>
               </tr>
               <tr>
-                <td>FinOps / custo</td>
+                <td data-i18n="metadata.schema.block.finops">FinOps / custo</td>
                 <td>—</td>
                 <td><code>finopsObservability</code>, <code>costPerUserMonthly</code>, <code>addonRunCostMonthly</code></td>
               </tr>
               <tr>
-                <td>Retenção</td>
+                <td data-i18n="metadata.schema.block.retention">Retenção</td>
                 <td>—</td>
                 <td><code>fieldHistoryRetentionMonths</code>, <code>bigObjectsEnabled</code></td>
               </tr>
             </tbody>
           </table>
 
-          <p class="req"><strong>Valores válidos para enums e campos textuais:</strong></p>
+          <p class="req" data-i18n-html="metadata.schema.enumsIntro"><strong>Valores válidos para enums e campos textuais:</strong></p>
           <ul style="padding-left:22px;font-size:13px;">
             <li><code>regulator</code>: <code>NONE</code>, <code>LGPD</code>, <code>BACEN</code>, <code>CVM</code>, <code>SUSEP</code>, <code>PREVIC</code>, <code>ANS</code>, <code>ANEEL</code>, <code>ANATEL</code>, <code>GDPR</code>, <code>CCPA</code>, <code>HIPAA</code>, <code>OTHER</code></li>
             <li><code>orgType</code>: <code>production</code>, <code>sandbox</code></li>
@@ -527,19 +539,19 @@
             <li><code>platformEventPublishedTypes[]</code>: <code>{"name":"AccountCDC","type":"cdc|standard|high-volume"}</code>.</li>
           </ul>
 
-          <p class="req"><strong>Exemplos completos</strong> em <code>samples/</code>: <code>OrgVarejoPF.json</code> (B2C regulado — Person Account, HVPE, Pub-Sub), <code>OrgAsset.json</code> (mercado de capitais — B2B, CVM, sem HVPE), <code>OrgCorporativa.json</code> (org de plataforma B2B — capacidade apertada, muitos add-ons). Use como referência ao montar orgs no Caminho B — copie o perfil mais próximo do seu setor e adapte.</p>
+          <p class="req" data-i18n-html="metadata.schema.samplesNote"><strong>Exemplos completos</strong> em <code>samples/</code>: <code>OrgVarejoPF.json</code> (B2C regulado — Person Account, HVPE, Pub-Sub), <code>OrgAsset.json</code> (mercado de capitais — B2B, CVM, sem HVPE), <code>OrgCorporativa.json</code> (org de plataforma B2B — capacidade apertada, muitos add-ons). Use como referência ao montar orgs no Caminho B — copie o perfil mais próximo do seu setor e adapte.</p>
         </div>
       </details>
 
       <div class="metadata-actions">
         <label class="file-btn">
-          Selecionar JSON(s) de org
+          <span data-i18n="metadata.selectBtn">Selecionar JSON(s) de org</span>
           <input type="file" id="metadataFile" accept="application/json,.json" multiple>
         </label>
-        <button type="button" class="btn-secondary" id="clearMetadataBtn" style="display:none;">Limpar metadata</button>
+        <button type="button" class="btn-secondary" id="clearMetadataBtn" style="display:none;" data-i18n="metadata.clearBtn">Limpar metadata</button>
       </div>
       <div class="metadata-loaded" id="metadataLoaded"></div>
-      <p class="privacy-notice">O arquivo é processado apenas no seu navegador. Nada é enviado a nenhum servidor.</p>
+      <p class="privacy-notice" data-i18n="metadata.privacy">O arquivo é processado apenas no seu navegador. Nada é enviado a nenhum servidor.</p>
     </div>
   </details>
 
@@ -553,14 +565,14 @@
       <div id="questionsRoot"></div>
 
       <div id="hubFedSection" class="card subq-section">
-        <p class="section-title">Se multi-org: Hub-and-Spoke ou Federated</p>
-        <p class="section-sub">Estas perguntas só influenciam o resultado se a recomendação principal for multi-org.</p>
+        <p class="section-title" data-i18n="q.section.hubFed">Se multi-org: Hub-and-Spoke ou Federated</p>
+        <p class="section-sub" data-i18n="q.section.hubFed.sub">Estas perguntas só influenciam o resultado se a recomendação principal for multi-org.</p>
         <div id="hubFedQuestions"></div>
       </div>
 
       <div class="actions">
-        <button type="button" class="btn-secondary" id="resetBtn">Limpar</button>
-        <button type="submit" class="btn-primary" id="submitBtn" disabled>Gerar recomendação</button>
+        <button type="button" class="btn-secondary" id="resetBtn" data-i18n="action.reset">Limpar</button>
+        <button type="submit" class="btn-primary" id="submitBtn" disabled data-i18n="action.submit">Gerar recomendação</button>
       </div>
     </form>
 
@@ -569,196 +581,98 @@
 
   <div id="allocationPanel" class="mode-panel">
     <div class="card">
-      <p class="section-title">Perfil do novo processo</p>
-      <p class="section-sub">Descreva o processo a ser alocado. Estas informações são cruzadas com o inventário de orgs carregado acima para filtrar candidatas.</p>
+      <p class="section-title" data-i18n="alloc.form.title">Perfil do novo processo</p>
+      <p class="section-sub" data-i18n="alloc.form.sub">Descreva o processo a ser alocado. Estas informações são cruzadas com o inventário de orgs carregado acima para filtrar candidatas.</p>
       <form id="processForm"></form>
     </div>
 
     <div class="actions">
-      <button type="button" class="btn-secondary" id="resetProcessBtn">Limpar</button>
+      <button type="button" class="btn-secondary" id="resetProcessBtn" data-i18n="action.reset">Limpar</button>
       <button type="button" class="btn-primary" id="runAllocationBtn" disabled>Filtrar orgs candidatas</button>
     </div>
 
     <div class="result" id="allocationResult"></div>
   </div>
 
-  <p class="footer-note">Framework baseado em Salesforce Well-Architected + Six-Factor (T. Leddy) + práticas de CTAs.
+  <p class="footer-note" data-i18n="app.footer">Framework baseado em Salesforce Well-Architected + Six-Factor (T. Leddy) + práticas de CTAs.
     Ferramenta de apoio à decisão — não substitui review arquitetural formal.</p>
 </div>
 
 <script type="module">
 import { normalizeOrgMetadata, evaluateOrgForProcess, analyzeLandscape } from './allocation-engine.mjs';
+import { initLang, setLang, getLang, getSupportedLangs, t, tList, registerTranslations } from './i18n.mjs';
+import { ptBR } from './i18n/pt-BR.mjs';
+import { enUS } from './i18n/en-US.mjs';
+import { esES } from './i18n/es-ES.mjs';
+
+registerTranslations('pt-BR', ptBR);
+registerTranslations('en-US', enUS);
+registerTranslations('es-ES', esES);
+initLang();
+
+// Perguntas: texto/label/reason via chaves i18n; pesos e IDs permanecem literais.
 const questions = [
-  {
-    id: 'residency',
-    section: 'Bloqueadores regulatórios e de segurança',
-    sectionSub: 'Respostas nesta seção podem forçar multi-org independentemente das demais.',
-    manualOnly: true,
-    text: 'Existe restrição legal de residência de dados entre jurisdições (LGPD-BR, GDPR-EU, PIPL-CN, sovereignty rules) que impeça consolidação num único tenant?',
+  { id: 'residency', sectionKey: 'q.section.blockers', sectionSubKey: 'q.section.blockers.sub', manualOnly: true,
     options: [
-      { label: 'Sim, conflitante — dados não podem trafegar cross-border', override: 'FORCE_MULTI', m: 10, s: 0, reason: 'Residência de dados conflitante entre jurisdições impede consolidação num único tenant.' },
-      { label: 'Existe, mas resolvível com Hyperforce regional + Shield encryption', m: 3, s: 4, reason: 'Restrição parcial de residência resolvível com controles lógicos.' },
-      { label: 'Não há restrição regulatória de residência', m: 0, s: 5, reason: 'Sem barreira de data residency.' }
-    ]
-  },
-  {
-    id: 'admin_segregation',
-    text: 'É obrigatório segregar acesso administrativo entre BUs (concorrentes internas, JVs, holdings com competidores) de forma que System Admin de uma BU não veja metadata da outra?',
+      { override: 'FORCE_MULTI', m: 10, s: 0 },
+      { m: 3, s: 4 },
+      { m: 0, s: 5 }
+    ]},
+  { id: 'admin_segregation',
     options: [
-      { label: 'Sim, isolamento administrativo é inegociável', override: 'FORCE_MULTI', m: 10, s: 0, reason: 'Segregação admin absoluta é impossível dentro de uma única org.' },
-      { label: 'Existe sensibilidade, mas permission sets + Modify All Data controlado bastam', m: 3, s: 4, reason: 'Sensibilidade admin resolvível com controle granular de permissões.' },
-      { label: 'Não há requisito de segregação admin', m: 0, s: 4, reason: 'Sem exigência de isolamento admin.' }
-    ]
-  },
-  {
-    id: 'physical_isolation',
-    manualOnly: true,
-    text: 'Regulador exige isolamento físico (não lógico) de dados — SOX segregation of duties strict, HIPAA scope reduction, PCI-DSS descoping?',
+      { override: 'FORCE_MULTI', m: 10, s: 0 },
+      { m: 3, s: 4 },
+      { m: 0, s: 4 }
+    ]},
+  { id: 'physical_isolation', manualOnly: true,
     options: [
-      { label: 'Sim, isolamento físico é obrigatório por regulador', override: 'FORCE_MULTI', m: 9, s: 0, reason: 'Isolamento físico exigido por regulador não é atendido por tenant único.' },
-      { label: 'Compliance existe mas atendida com Shield + FAT + sharing rules', m: 3, s: 4, reason: 'Compliance atendida por controles lógicos in-org.' },
-      { label: 'Não aplicável', m: 0, s: 3, reason: 'Sem exigência de isolamento físico.' }
-    ]
-  },
+      { override: 'FORCE_MULTI', m: 9, s: 0 },
+      { m: 3, s: 4 },
+      { m: 0, s: 3 }
+    ]},
 
-  {
-    id: 'corporate_structure',
-    section: 'Estrutura de negócio',
-    manualOnly: true,
-    text: 'Estrutura corporativa envolve entidades legais distintas (CNPJs, boards independentes, P&L segregado)?',
-    options: [
-      { label: 'Holding com subsidiárias legalmente distintas ou JVs com sócios externos', m: 7, s: 0, reason: 'Estrutura legal segmentada com governança independente por entidade.' },
-      { label: 'Grupo com filiais/divisões operacionais sob mesma matriz', m: 2, s: 6, reason: 'Filiais operacionais sob governança única.' },
-      { label: 'Empresa única sem subsidiárias', m: 0, s: 8, reason: 'Perímetro corporativo único e estável.' }
-    ]
-  },
-  {
-    id: 'business_model',
-    text: 'BUs têm modelos de negócio compatíveis com o mesmo data model Salesforce (Account/Contact/Opportunity)?',
-    options: [
-      { label: 'B2B e B2C coexistem com Person Account/Multi-Currency conflitantes entre BUs', m: 8, s: 0, reason: 'Features irreversíveis (Person Account, Multi-Currency) conflitam entre BUs.' },
-      { label: 'Linhas de produto com data model divergente mas gerenciável via Record Types', m: 4, s: 3, reason: 'Divergência de modelo resolvível com Record Types e page layouts.' },
-      { label: 'Todas as BUs compartilham Account/Contact/Opportunity naturalmente', m: 0, s: 8, reason: 'Data model unificado entre BUs.' }
-    ]
-  },
-  {
-    id: 'ma_pipeline',
-    manualOnly: true,
-    text: 'Há pipeline ativo de M&A ou probabilidade real de spin-off/divestiture em 3-5 anos?',
-    options: [
-      { label: 'Pipeline ativo e probabilidade real de carve-out em 3-5 anos', m: 6, s: 0, reason: 'M&A ativo + risco de carve-out favorece topologia que suporta separação limpa.' },
-      { label: 'M&A esporádico, absorvível por migração', m: 2, s: 4, reason: 'M&A baixa frequência, absorvível em single-org.' },
-      { label: 'Perímetro estável, sem carve-out previsto', m: 0, s: 5, reason: 'Perímetro estável no médio prazo.' }
-    ]
-  },
-  {
-    id: 'shared_customer',
-    text: 'Mesmo cliente é atendido por múltiplas BUs com necessidade real de visão 360º e cross-sell operacional?',
-    options: [
-      { label: 'Sim, cross-sell operacional é core do negócio', m: 0, s: 9, reason: 'Cross-sell operacional exige 360 nativo — multi-org multiplica complexidade de sync.' },
-      { label: 'Existe overlap, mas resolvível com Data Cloud federando as orgs', m: 3, s: 4, reason: 'Overlap parcial pode ser resolvido com Data Cloud como hub de identidade.' },
-      { label: 'Bases de cliente são disjuntas por natureza', m: 5, s: 0, reason: 'Bases disjuntas — sem penalidade de sync cross-org.' }
-    ]
-  },
-  {
-    id: 'release_autonomy',
-    text: 'BUs têm autonomia de release com roadmaps independentes e cadências diferentes?',
-    options: [
-      { label: 'Roadmaps completamente independentes, releases bloqueiam-se mutuamente', m: 5, s: 0, reason: 'Cadência de release incompatível gera fricção contínua em single-org sem 2GP.' },
-      { label: 'Existe fricção mas resolvível com 2GP + feature branches', m: 2, s: 4, reason: '2GP + trunk-based resolvem isolamento sem custo de licença.' },
-      { label: 'Governance central + release cadence unificada é aceitável', m: 0, s: 6, reason: 'CoE central viável com cadência coordenada.' }
-    ]
-  },
+  { id: 'corporate_structure', sectionKey: 'q.section.business', manualOnly: true,
+    options: [ { m: 7, s: 0 }, { m: 2, s: 6 }, { m: 0, s: 8 } ]},
+  { id: 'business_model',
+    options: [ { m: 8, s: 0 }, { m: 4, s: 3 }, { m: 0, s: 8 } ]},
+  { id: 'ma_pipeline', manualOnly: true,
+    options: [ { m: 6, s: 0 }, { m: 2, s: 4 }, { m: 0, s: 5 } ]},
+  { id: 'shared_customer',
+    options: [ { m: 0, s: 9 }, { m: 3, s: 4 }, { m: 5, s: 0 } ]},
+  { id: 'release_autonomy',
+    options: [ { m: 5, s: 0 }, { m: 2, s: 4 }, { m: 0, s: 6 } ]},
 
-  {
-    id: 'metadata_volume',
-    section: 'Restrições técnicas',
-    text: 'Qual o volume de custom objects ativos e tempo de retrieve completo da org?',
-    options: [
-      { label: '>2.000 custom objects OU retrieve completo >1h', m: 5, s: 0, reason: 'Volume de metadata próximo dos limites de plataforma torna operação em single-org custosa.' },
-      { label: 'Entre 500 e 2.000 custom objects, gerenciável', m: 2, s: 4, reason: 'Volume médio, absorvível com 2GP e archive strategy.' },
-      { label: 'Menos de 500 custom objects', m: 0, s: 5, reason: 'Volume de metadata confortável em single-org.' }
-    ]
-  },
-  {
-    id: 'sharing_complexity',
-    text: 'Complexidade do sharing model (role hierarchy, territory management)?',
-    options: [
-      { label: 'Mais de 10.000 roles OU territórios com sobreposição extrema entre BUs', m: 6, s: 0, reason: 'Sharing model no limite operacional — group membership recalc degrada performance.' },
-      { label: 'Sharing complexo mas resolvível com Restriction Rules + Scoping Rules + Enhanced Sharing', m: 2, s: 4, reason: 'Complexidade endereçável com recursos nativos modernos de sharing.' },
-      { label: 'Sharing model simples ou moderado', m: 0, s: 5, reason: 'Sharing model dentro da zona confortável.' }
-    ]
-  },
-  {
-    id: 'devops_maturity',
-    text: 'Maturidade DevOps do time — capacidade de modularizar com Unlocked Packages (2GP)?',
-    options: [
-      { label: 'Time sem apetite ou maturidade para 2GP no médio prazo', m: 3, s: 0, reason: 'Sem 2GP, isolamento lógico dentro de single-org é frágil.' },
-      { label: '2GP em adoção, maturidade viável em 6-12 meses', m: 1, s: 5, reason: '2GP em rampa — resolve isolamento lógico sem custo de licença.' },
-      { label: '2GP maduro, trunk-based operante, DevOps Center / sfdx-hardis em uso', m: 0, s: 7, reason: 'Maturidade DevOps permite modularização robusta em single-org.' }
-    ]
-  },
+  { id: 'metadata_volume', sectionKey: 'q.section.technical',
+    options: [ { m: 5, s: 0 }, { m: 2, s: 4 }, { m: 0, s: 5 } ]},
+  { id: 'sharing_complexity',
+    options: [ { m: 6, s: 0 }, { m: 2, s: 4 }, { m: 0, s: 5 } ]},
+  { id: 'devops_maturity',
+    options: [ { m: 3, s: 0 }, { m: 1, s: 5 }, { m: 0, s: 7 } ]},
 
-  {
-    id: 'user_mobility',
-    section: 'Custo e operação',
-    text: 'Usuários transitam entre BUs — mesmo colaborador precisa operar em múltiplas BUs?',
-    options: [
-      { label: 'Muitos usuários operam cross-BU (duplicaria licenças em multi-org)', m: 0, s: 6, reason: 'Mobilidade de usuários entre BUs multiplica licenças em multi-org.' },
-      { label: 'Alguns usuários cross-BU, gerenciável', m: 2, s: 3, reason: 'Mobilidade parcial, custo de licença moderado.' },
-      { label: 'Bases de usuário são disjuntas por BU', m: 4, s: 0, reason: 'Bases disjuntas — sem duplicação de licença em multi-org.' }
-    ]
-  },
-  {
-    id: 'addon_dependency',
-    text: 'Dependência de add-ons caros e não-pooláveis entre orgs (Shield, Data Cloud, Agentforce, Event Monitoring, FAT)?',
-    options: [
-      { label: 'Alto uso de add-ons — custo se multiplicaria linearmente por N orgs', m: 0, s: 6, reason: 'Add-ons são SKU per-org — multi-org multiplica custo de features caras.' },
-      { label: 'Uso moderado, custo aceitável em multi-org', m: 2, s: 3, reason: 'Uso moderado de add-ons — impacto contido.' },
-      { label: 'Baixa dependência de add-ons pagos', m: 2, s: 2, reason: 'Baixa dependência de add-ons — variável não decisiva.' }
-    ]
-  }
+  { id: 'user_mobility', sectionKey: 'q.section.cost',
+    options: [ { m: 0, s: 6 }, { m: 2, s: 3 }, { m: 4, s: 0 } ]},
+  { id: 'addon_dependency',
+    options: [ { m: 0, s: 6 }, { m: 2, s: 3 }, { m: 2, s: 2 } ]}
 ];
 
 const hubFedQuestions = [
-  {
-    id: 'master_data',
-    text: 'Existe master data centralizado (accounts corporativas, catálogo de produtos, tabela de preços) que deve fluir de uma fonte para as demais BUs?',
-    options: [
-      { label: 'Sim, master unidirecional — uma fonte alimenta as satélites', h: 5, f: 0, reason: 'Master data centralizado com fluxo unidirecional favorece Hub-and-Spoke.' },
-      { label: 'Cada BU é master de sua própria fatia — sem golden record único', h: 0, f: 4, reason: 'Ausência de master único favorece topologia federada.' },
-      { label: 'Ainda não há master data governado', h: 2, f: 2, reason: 'Governança de master data indefinida — priorizar essa decisão antes da topologia.' }
-    ]
-  },
-  {
-    id: 'bidirectional_sync',
-    text: 'Sync bidirecional entre orgs é inescapável (mesmo cliente é atualizado em ambas as pontas)?',
-    options: [
-      { label: 'Sim, sync bidirecional é obrigatório', h: 0, f: 6, reason: 'Sync bidirecional obrigatório é o cenário natural de Federated.' },
-      { label: 'Prefere unidirecional mas com exceções pontuais', h: 3, f: 2, reason: 'Fluxo majoritariamente unidirecional com exceções — Hub com callbacks controlados funciona.' },
-      { label: 'Fluxo estritamente unidirecional (hub → spoke)', h: 5, f: 0, reason: 'Fluxo unidirecional puro é Hub-and-Spoke por definição.' }
-    ]
-  },
-  {
-    id: 'consolidated_reporting',
-    text: 'Reporting executivo consolidado (rollup C-level unificado) é requisito?',
-    options: [
-      { label: 'Sim, dashboard executivo unificado é obrigatório', h: 5, f: 0, reason: 'Rollup executivo unificado exige agregador central — Hub-and-Spoke com CRM Analytics/Data Cloud no hub.' },
-      { label: 'Aceitável reporting descentralizado consolidado externamente (Tableau/PowerBI)', h: 2, f: 3, reason: 'Consolidação fora do CRM permite topologia federada.' },
-      { label: 'Reporting descentralizado é aceitável', h: 0, f: 3, reason: 'Sem exigência de rollup — federated aceitável.' }
-    ]
-  },
-  {
-    id: 'transitional_ma',
-    manualOnly: true,
-    text: 'Este é um cenário transitório de M&A com deadline explícito de consolidação em 12-24 meses?',
-    options: [
-      { label: 'Sim, transitório com deadline claro de consolidação', h: 0, f: 5, reason: 'Cenário transitório de M&A é o único caso em que Federated peer-to-peer é aceitável em greenfield.' },
-      { label: 'Multi-org permanente por natureza do negócio', h: 4, f: 0, reason: 'Topologia permanente favorece Hub-and-Spoke pela governança de dados.' },
-      { label: 'Horizonte indefinido', h: 2, f: 1, reason: 'Horizonte indefinido — atenção: federated sem deadline vira permanente por inércia.' }
-    ]
-  }
+  { id: 'master_data',
+    options: [ { h: 5, f: 0 }, { h: 0, f: 4 }, { h: 2, f: 2 } ]},
+  { id: 'bidirectional_sync',
+    options: [ { h: 0, f: 6 }, { h: 3, f: 2 }, { h: 5, f: 0 } ]},
+  { id: 'consolidated_reporting',
+    options: [ { h: 5, f: 0 }, { h: 2, f: 3 }, { h: 0, f: 3 } ]},
+  { id: 'transitional_ma', manualOnly: true,
+    options: [ { h: 0, f: 5 }, { h: 4, f: 0 }, { h: 2, f: 1 } ]}
 ];
+
+// Helpers para resolver texto de perguntas via chaves derivadas do id.
+function qText(q) { return t(`q.${q.id}.text`); }
+function qOptLabel(q, i) { return t(`q.${q.id}.opt.${i}.label`); }
+function qOptReason(q, i) { return t(`q.${q.id}.opt.${i}.reason`); }
+function hfText(q) { return t(`hf.${q.id}.text`); }
+function hfOptLabel(q, i) { return t(`hf.${q.id}.opt.${i}.label`); }
+function hfOptReason(q, i) { return t(`hf.${q.id}.opt.${i}.reason`); }
 
 const state = { answers: {}, hubFed: {}, metadata: [], inferences: {}, process: {} };
 
@@ -839,22 +753,21 @@ function runInferences() {
 
 function renderQuestions() {
   const root = document.getElementById('questionsRoot');
-  let currentSection = null;
+  root.innerHTML = '';
   let sectionCard = null;
 
-  questions.forEach((q, idx) => {
-    if (q.section) {
-      currentSection = q.section;
+  questions.forEach((q) => {
+    if (q.sectionKey) {
       sectionCard = document.createElement('div');
       sectionCard.className = 'card';
       const h = document.createElement('p');
       h.className = 'section-title';
-      h.textContent = q.section;
+      h.textContent = t(q.sectionKey);
       sectionCard.appendChild(h);
-      if (q.sectionSub) {
+      if (q.sectionSubKey) {
         const s = document.createElement('p');
         s.className = 'section-sub';
-        s.textContent = q.sectionSub;
+        s.textContent = t(q.sectionSubKey);
         sectionCard.appendChild(s);
       }
       root.appendChild(sectionCard);
@@ -864,6 +777,7 @@ function renderQuestions() {
   });
 
   const hubFedRoot = document.getElementById('hubFedQuestions');
+  hubFedRoot.innerHTML = '';
   hubFedQuestions.forEach(q => {
     hubFedRoot.appendChild(buildQuestion(q, 'hubFed'));
   });
@@ -875,7 +789,7 @@ function buildQuestion(q, storeKey) {
   wrap.dataset.qid = q.id;
   const title = document.createElement('div');
   title.className = 'q-text';
-  title.textContent = q.text;
+  title.textContent = storeKey === 'answers' ? qText(q) : hfText(q);
 
   const badgeContainer = document.createElement('span');
   badgeContainer.className = 'q-badges';
@@ -896,6 +810,10 @@ function buildQuestion(q, storeKey) {
     input.type = 'radio';
     input.name = q.id;
     input.value = i;
+    if (state[storeKey][q.id] === i) {
+      input.checked = true;
+      label.classList.add('selected');
+    }
     input.addEventListener('change', () => {
       const prev = state[storeKey][q.id];
       state[storeKey][q.id] = i;
@@ -913,7 +831,7 @@ function buildQuestion(q, storeKey) {
     });
     const span = document.createElement('span');
     span.className = 'opt-label';
-    span.textContent = opt.label;
+    span.textContent = storeKey === 'answers' ? qOptLabel(q, i) : hfOptLabel(q, i);
     label.appendChild(input);
     label.appendChild(span);
     opts.appendChild(label);
@@ -931,7 +849,7 @@ function refreshBadges(q, wrap, storeKey) {
   if (q.manualOnly && state.metadata.length > 0) {
     const b = document.createElement('span');
     b.className = 'badge badge-manual';
-    b.textContent = 'Requer resposta humana';
+    b.textContent = t('badge.manualOnly');
     badgeContainer.appendChild(b);
     return;
   }
@@ -945,14 +863,16 @@ function refreshBadges(q, wrap, storeKey) {
   const badge = document.createElement('span');
   if (isOverridden) {
     badge.className = 'badge badge-override';
-    badge.textContent = 'Manualmente ajustado';
+    badge.textContent = t('badge.overridden');
   } else {
     badge.className = 'badge badge-auto';
-    badge.textContent = 'Auto-preenchido';
+    badge.textContent = t('badge.autoFilled');
   }
   badgeContainer.appendChild(badge);
 
-  evidenceEl.innerHTML = `<strong>Dado da org${state.metadata.length > 1 ? '(s)' : ''}:</strong> ${inf.evidence}${inf.sources && inf.sources.length ? ` <span style="opacity:0.7;">(${inf.sources.join(' · ')})</span>` : ''}`;
+  const plural = state.metadata.length > 1 ? '(s)' : '';
+  const html = t('evidence.orgData', { plural, evidence: inf.evidence });
+  evidenceEl.innerHTML = `${html}${inf.sources && inf.sources.length ? ` <span style="opacity:0.7;">(${inf.sources.join(' · ')})</span>` : ''}`;
   evidenceEl.style.display = 'block';
 }
 
@@ -982,7 +902,7 @@ function updateProgress() {
   const done = Object.keys(state.answers).length;
   const pct = (done / total) * 100;
   document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('progressLabel').textContent = `${done} / ${total} respondidas`;
+  document.getElementById('progressLabel').textContent = t('progress.label', { done, total });
   document.getElementById('submitBtn').disabled = done < total;
   document.getElementById('hubFedSection').classList.toggle('visible', done >= total - 4);
 }
@@ -998,11 +918,10 @@ function compute() {
     const opt = q.options[ans];
     single += opt.s;
     multi += opt.m;
-    if (opt.override === 'FORCE_MULTI') overrides.push({ q: q.text, reason: opt.reason });
+    if (opt.override === 'FORCE_MULTI') overrides.push({ qId: q.id, optIdx: ans });
     contributions.push({
-      qText: q.text,
-      chosen: opt.label,
-      reason: opt.reason,
+      qId: q.id,
+      optIdx: ans,
       leansMulti: opt.m > opt.s,
       leansSingle: opt.s > opt.m,
       weight: Math.max(opt.m, opt.s),
@@ -1031,7 +950,7 @@ function compute() {
       const opt = q.options[ans];
       hub += opt.h;
       fed += opt.f;
-      subContribs.push({ qText: q.text, reason: opt.reason, leansHub: opt.h > opt.f, leansFed: opt.f > opt.h });
+      subContribs.push({ qId: q.id, optIdx: ans, leansHub: opt.h > opt.f, leansFed: opt.f > opt.h });
     });
     subType = hub >= fed ? 'hub' : 'fed';
     return { recommendation, subType, single, multi, singlePct, multiPct, forced, overrides, borderline, contributions, subContribs, hub, fed };
@@ -1050,29 +969,27 @@ function renderResult(r) {
   if (r.forced) {
     heroClass = r.subType === 'fed' ? 'multi-fed' : 'multi-hub';
     resultVariant = 'result-multi';
-    eyebrowText = 'Recomendação · multi-org obrigatório';
-    titleText = r.subType === 'fed' ? 'Multi-Org — Federated' : 'Multi-Org — Hub-and-Spoke';
-    summaryText = 'Um ou mais bloqueadores regulatórios/de segurança forçam multi-org independentemente dos demais critérios.';
+    eyebrowText = t('result.forced.eyebrow');
+    titleText = t(r.subType === 'fed' ? 'result.forced.title.fed' : 'result.forced.title.hub');
+    summaryText = t('result.forced.summary');
   } else if (r.borderline) {
     heroClass = 'borderline';
     resultVariant = 'result-borderline';
-    eyebrowText = 'Recomendação · zona de borda';
-    titleText = 'Decisão borderline — priorize single-org com escrutínio';
-    summaryText = 'Diferença de scores é pequena. Antes de comprometer com multi-org, exaure alternativas em single-org: 2GP, Restriction Rules, Scoping Rules, Data Cloud, Experience Cloud e Shield encryption.';
+    eyebrowText = t('result.borderline.eyebrow');
+    titleText = t('result.borderline.title');
+    summaryText = t('result.borderline.summary');
   } else if (r.recommendation === 'single') {
     heroClass = 'single';
     resultVariant = 'result-single';
-    eyebrowText = 'Recomendação';
-    titleText = 'Single Org';
-    summaryText = 'Os critérios avaliados favorecem consolidação em uma única org. Ganhos: 360º nativo, colaboração, admin único, TCO menor.';
+    eyebrowText = t('result.single.eyebrow');
+    titleText = t('result.single.title');
+    summaryText = t('result.single.summary');
   } else {
     heroClass = r.subType === 'fed' ? 'multi-fed' : 'multi-hub';
     resultVariant = 'result-multi';
-    eyebrowText = 'Recomendação';
-    titleText = r.subType === 'fed' ? 'Multi-Org — Federated' : 'Multi-Org — Hub-and-Spoke';
-    summaryText = r.subType === 'fed'
-      ? 'Multi-org com sync peer-to-peer. Válido em cenário transitório de M&A com deadline ou quando cada BU é master de sua fatia.'
-      : 'Multi-org com uma master org distribuindo dados para satélites autônomas. Padrão preferido para multi-org permanente.';
+    eyebrowText = t('result.multi.eyebrow');
+    titleText = t(r.subType === 'fed' ? 'result.multi.title.fed' : 'result.multi.title.hub');
+    summaryText = t(r.subType === 'fed' ? 'result.multi.summary.fed' : 'result.multi.summary.hub');
   }
 
   const hero = document.createElement('div');
@@ -1086,20 +1003,12 @@ function renderResult(r) {
       <div class="score-multi" style="width:${r.multiPct}%"></div>
     </div>
     <div class="score-legend">
-      <span>Single: ${r.single} pts (${r.singlePct.toFixed(0)}%)</span>
-      <span>Multi: ${r.multi} pts (${r.multiPct.toFixed(0)}%)</span>
+      <span>${t('result.score.single', { points: r.single, pct: r.singlePct.toFixed(0) })}</span>
+      <span>${t('result.score.multi', { points: r.multi, pct: r.multiPct.toFixed(0) })}</span>
     </div>
     <details class="score-explainer">
-      <summary>Como o score é calculado</summary>
-      <div class="score-explainer-body">
-        <p>Cada opção de resposta traz dois pesos declarados: <code>s</code> (pró-single-org) e <code>m</code> (pró-multi-org). O motor soma ambos ao longo das 14 perguntas.</p>
-        <ul>
-          <li><strong>Pesos por importância</strong> — perguntas de bloqueador (regulação, features irreversíveis) têm faixas maiores (0-8); moderadas (2GP, sharing) vão até 4.</li>
-          <li><strong>Recomendação</strong> = maior dos dois somatórios. Se a diferença absoluta é pequena, o resultado aparece como <em>borderline</em>.</li>
-          <li><strong>Overrides manuais</strong> (residência de dados legal, isolamento regulatório) sobrepõem o score e forçam multi-org mesmo se single vencer numericamente.</li>
-          <li>O score é <strong>orientativo</strong> — indica direção, não veredicto único. Use como ponto de partida do ARB.</li>
-        </ul>
-      </div>
+      <summary>${t('result.explainer.summary')}</summary>
+      <div class="score-explainer-body">${t('result.explainer.body')}</div>
     </details>
   `;
   el.appendChild(hero);
@@ -1107,13 +1016,14 @@ function renderResult(r) {
   if (r.forced) {
     const banner = document.createElement('div');
     banner.className = 'card override-banner';
-    banner.innerHTML = `<strong>Bloqueador acionado</strong> — os seguintes critérios forçam multi-org e sobrepõem qualquer score:`;
+    banner.innerHTML = t('result.overrideBanner');
     const ul = document.createElement('ul');
     ul.className = 'justif-list';
     r.overrides.forEach(o => {
+      const q = questions.find(x => x.id === o.qId);
       const li = document.createElement('li');
       li.className = 'multi';
-      li.innerHTML = `<strong>${o.q}</strong>${o.reason}`;
+      li.innerHTML = `<strong>${qText(q)}</strong>${qOptReason(q, o.optIdx)}`;
       ul.appendChild(li);
     });
     banner.appendChild(ul);
@@ -1134,13 +1044,14 @@ function renderResult(r) {
 
   const proBlock = document.createElement('div');
   proBlock.className = 'justif-block';
-  proBlock.innerHTML = `<h3>Critérios que sustentam a recomendação</h3>`;
+  proBlock.innerHTML = `<h3>${t('result.pro.title')}</h3>`;
   const proUl = document.createElement('ul');
   proUl.className = 'justif-list';
   pro.forEach(c => {
+    const q = questions.find(x => x.id === c.qId);
     const li = document.createElement('li');
     li.className = r.recommendation === 'multi' ? 'multi' : 'single';
-    li.innerHTML = `<strong>${c.qText}</strong>${c.reason}`;
+    li.innerHTML = `<strong>${qText(q)}</strong>${qOptReason(q, c.optIdx)}`;
     proUl.appendChild(li);
   });
   proBlock.appendChild(proUl);
@@ -1149,13 +1060,14 @@ function renderResult(r) {
   if (con.length > 0) {
     const conBlock = document.createElement('div');
     conBlock.className = 'justif-block';
-    conBlock.innerHTML = `<h3>Contra-argumentos a considerar</h3>`;
+    conBlock.innerHTML = `<h3>${t('result.con.title')}</h3>`;
     const conUl = document.createElement('ul');
     conUl.className = 'justif-list';
     con.forEach(c => {
+      const q = questions.find(x => x.id === c.qId);
       const li = document.createElement('li');
       li.className = 'warn';
-      li.innerHTML = `<strong>${c.qText}</strong>${c.reason}`;
+      li.innerHTML = `<strong>${qText(q)}</strong>${qOptReason(q, c.optIdx)}`;
       conUl.appendChild(li);
     });
     conBlock.appendChild(conUl);
@@ -1165,15 +1077,17 @@ function renderResult(r) {
   if (r.subType && r.subContribs) {
     const subBlock = document.createElement('div');
     subBlock.className = 'justif-block';
-    subBlock.innerHTML = `<h3>Por que ${r.subType === 'fed' ? 'Federated' : 'Hub-and-Spoke'} (Hub: ${r.hub} · Fed: ${r.fed})</h3>`;
+    const titleKey = r.subType === 'fed' ? 'result.subType.fed.title' : 'result.subType.hub.title';
+    subBlock.innerHTML = `<h3>${t(titleKey, { hub: r.hub, fed: r.fed })}</h3>`;
     const subUl = document.createElement('ul');
     subUl.className = 'justif-list';
     r.subContribs
       .filter(c => (r.subType === 'hub' && c.leansHub) || (r.subType === 'fed' && c.leansFed))
       .forEach(c => {
+        const q = hubFedQuestions.find(x => x.id === c.qId);
         const li = document.createElement('li');
         li.className = 'multi';
-        li.innerHTML = `<strong>${c.qText}</strong>${c.reason}`;
+        li.innerHTML = `<strong>${hfText(q)}</strong>${hfOptReason(q, c.optIdx)}`;
         subUl.appendChild(li);
       });
     subBlock.appendChild(subUl);
@@ -1183,19 +1097,19 @@ function renderResult(r) {
   if (r.borderline) {
     const warnBlock = document.createElement('div');
     warnBlock.className = 'justif-block';
-    warnBlock.innerHTML = `<h3>Alternativas em single-org a esgotar antes de decidir multi</h3>`;
+    warnBlock.innerHTML = `<h3>${t('result.alternatives.title')}</h3>`;
     const wUl = document.createElement('ul');
     wUl.className = 'justif-list';
     [
-      ['Unlocked Packages (2GP)', 'Modulariza metadata sem custo de licença, isola releases por BU.'],
-      ['Restriction Rules + Scoping Rules', 'Segrega visibilidade sem hierarquia complexa de roles.'],
-      ['Data Cloud como hub de identidade', 'Resolve 360º sem duplicar dados operacionais.'],
-      ['Experience Cloud + permission sets', 'Personaliza UX por BU dentro do mesmo tenant.'],
-      ['Shield Platform Encryption + FAT', 'Compliance sem separar tenants.']
-    ].forEach(([k, v]) => {
+      ['result.alt.2gp.name', 'result.alt.2gp.desc'],
+      ['result.alt.rules.name', 'result.alt.rules.desc'],
+      ['result.alt.dataCloud.name', 'result.alt.dataCloud.desc'],
+      ['result.alt.expCloud.name', 'result.alt.expCloud.desc'],
+      ['result.alt.shield.name', 'result.alt.shield.desc']
+    ].forEach(([kName, kDesc]) => {
       const li = document.createElement('li');
       li.className = 'warn';
-      li.innerHTML = `<strong>${k}</strong>${v}`;
+      li.innerHTML = `<strong>${t(kName)}</strong>${t(kDesc)}`;
       wUl.appendChild(li);
     });
     warnBlock.appendChild(wUl);
@@ -1282,9 +1196,9 @@ function renderMetadataLoaded(orgs, errors) {
   const inferredCount = Object.keys(state.inferences).length;
   const manualCount = questions.filter(q => q.manualOnly).length;
   const parts = [];
-  parts.push(`<strong>${orgs.length} org(s) carregada(s):</strong> ${orgs.map(o => o.orgName).join(', ')}`);
-  parts.push(`<ul><li>${inferredCount} pergunta(s) pré-preenchida(s) automaticamente</li><li>${manualCount} pergunta(s) permanecem obrigatoriamente manuais (marcadas com badge)</li></ul>`);
-  if (errors.length) parts.push(`<div style="color:var(--multi);margin-top:8px;"><strong>Erros:</strong> ${errors.join('; ')}</div>`);
+  parts.push(t('metadata.loaded.header', { count: orgs.length, names: orgs.map(o => o.orgName).join(', ') }));
+  parts.push(`<ul><li>${t('metadata.loaded.autofilled', { count: inferredCount })}</li><li>${t('metadata.loaded.manual', { count: manualCount })}</li></ul>`);
+  if (errors.length) parts.push(`<div style="color:var(--multi);margin-top:8px;">${t('metadata.loaded.errors', { errors: errors.join('; ') })}</div>`);
   el.innerHTML = parts.join('');
   el.classList.add('visible');
 }
@@ -1300,10 +1214,9 @@ document.addEventListener('click', e => {
   }
   if (!text) return;
   navigator.clipboard.writeText(text).then(() => {
-    const original = btn.textContent;
-    btn.textContent = 'Copiado';
+    btn.textContent = t('metadata.copyBtn.copied');
     btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+    setTimeout(() => { btn.textContent = t('metadata.copyBtn'); btn.classList.remove('copied'); }, 1500);
   });
 });
 
@@ -1311,109 +1224,114 @@ document.addEventListener('click', e => {
 // MODO ALOCAÇÃO — perfil do processo, filtragem e renderização
 // ============================================================
 
-const processSections = [
-  { title: 'Identificação', desc: 'Contexto básico do processo.', fields: [
-    { id: 'name', type: 'text', label: 'Nome do processo', hint: 'Ex: Onboarding de cliente, Gestão de campanhas, Ticket de suporte, Contratação B2B.', required: true },
-    { id: 'lobOwner', type: 'text', label: 'LOB / BU owner', hint: 'Área/unidade dona do processo (ex: Vendas B2B, Varejo, Marketing, Serviços, Operações, Público).', required: true },
-    { id: 'criticality', type: 'select', label: 'Criticidade', hint: 'Determina exigências de Full Copy sandbox, RTO/RPO e support tier.',
-      options: [ ['','Selecione…'], ['low','Baixa'], ['medium','Média'], ['high','Alta'], ['critical','Crítica'] ] }
-  ]},
-  { title: 'Regulatório & Compliance', desc: 'Perímetro legal e requisitos de conformidade.', fields: [
-    { id: 'regulator', type: 'select', label: 'Regulador aplicável', hint: 'Bloqueador para orgs com regulador diferente.', required: true,
-      options: [ ['','Selecione…'], ['NONE','Não regulado / apoio interno'], ['LGPD','LGPD-only (dado pessoal, sem regulador setorial)'], ['BACEN','BACEN (banking, meios de pagamento, câmbio)'], ['CVM','CVM (mercado de capitais, asset management)'], ['SUSEP','SUSEP (seguros)'], ['PREVIC','Previc (previdência complementar)'], ['ANS','ANS (saúde suplementar)'], ['ANEEL','ANEEL (energia)'], ['ANATEL','ANATEL (telecom)'], ['GDPR','GDPR (operação europeia)'], ['CCPA','CCPA (operação Califórnia)'], ['HIPAA','HIPAA (saúde EUA)'], ['OTHER','Outro / múltiplos'] ] },
-    { id: 'dataController', type: 'select', label: 'Data controller LGPD', hint: 'Entidade legal responsável pelos dados pessoais.', required: true,
-      options: [ ['','Selecione…'], ['SAME','Mesmo controller de orgs existentes'], ['DIFFERENT','Controller distinto (JV, subsidiária)'], ['UNKNOWN','A definir com Legal/DPO'] ] },
-    { id: 'complianceScope', type: 'checkbox', label: 'Escopo de compliance', options: [
-      ['pci','Toca dados de cartão (PCI-DSS)'],
-      ['sox','Financeiro/contábil (SOX)']
-    ] },
-    { id: 'requiresConsentFramework', type: 'select', label: 'Requer consent framework?', hint: 'Opt-in de comunicação com preference center unificado.',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim (opt-in / preference center)'] ] },
-    { id: 'requiresDataMasking', type: 'select', label: 'Requer Data Mask em sandbox?', hint: 'LGPD-sensível — dados anonimizados obrigatoriamente.',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
-  ]},
-  { title: 'Arquitetura de dados', desc: 'Modelo, master data, features irreversíveis.', fields: [
-    { id: 'dataModel', type: 'select', label: 'Data model exigido', hint: 'Features irreversíveis (Person Account, FSC) restringem candidatas. Escolha o modelo primário do processo.', required: true,
-      options: [ ['','Selecione…'], ['b2b','B2B padrão (Account/Contact/Opportunity)'], ['personAccount','Person Account (B2C — pessoa é a entidade central)'], ['fsc','Financial Services Cloud'], ['healthcloud','Health Cloud'], ['nonprofit','Nonprofit Success Pack'], ['education','Education Cloud'], ['manufacturing','Manufacturing Cloud'], ['custom','Custom / híbrido'] ] },
-    { id: 'features', type: 'checkbox', label: 'Features especiais exigidas',
-      options: [ ['multiCurrency','Multi-Currency'], ['shield','Shield Encryption'], ['fat','Field Audit Trail'], ['eventMonitoring','Event Monitoring'], ['dataCloud','Data Cloud'], ['agentforce','Agentforce'], ['experienceCloud','Experience Cloud'] ] },
-    { id: 'requiredSharingModel', type: 'select', label: 'Sharing model exigido', hint: 'Compatibilidade com o modelo da org candidata.',
-      options: [ ['','(qualquer)'], ['private','Private'], ['public','Public Read/Write'], ['controlled','Controlled by parent'] ] },
-    { id: 'touchesMasterDataEntities', type: 'text', label: 'Entidades de master data que o processo toca', hint: 'Lista separada por vírgula. Ex: Account, Contact, Product.' },
-    { id: 'masterDataRole', type: 'select', label: 'Papel MDM do processo', hint: 'Determina se contribui ou consome fonte da verdade.',
-      options: [ ['','Selecione…'], ['owner','Owner (fonte da verdade)'], ['consumer','Consumer (recebe fonte)'] ] },
-    { id: 'requiredFieldHistoryMonths', type: 'text', label: 'Retenção mínima de Field History (meses)', hint: 'Vazio = não exigido.' },
-    { id: 'requiresBigObjects', type: 'select', label: 'Requer Big Objects para arquivamento?',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
-  ]},
-  { title: 'Volume, capacidade e concorrência', desc: 'Estimativas para projeção pós-alocação.', fields: [
-    { id: 'estimatedRecordsPerYear', type: 'text', label: 'Volume: registros/ano', hint: 'Número aproximado. Vazio → warn no filtro projection.' },
-    { id: 'estimatedApiCallsDaily', type: 'text', label: 'Chamadas API/dia (média)', hint: 'Número aproximado.' },
-    { id: 'peakApiPerSec', type: 'text', label: 'Pico API/segundo', hint: 'Rajada em janela pequena — o que quebra Concurrent limits.' },
-    { id: 'peakEventsPerSec', type: 'text', label: 'Pico eventos/segundo', hint: 'Rajada de Platform Events.' },
-    { id: 'usesLongRunning', type: 'select', label: 'Usa Concurrent Long-Running Requests?',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] },
-    { id: 'usesFuture', type: 'select', label: 'Usa @future methods?',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] },
-    { id: 'usesQueueable', type: 'select', label: 'Usa Queueable com chaining?',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
-  ]},
-  { title: 'Cadência e DevOps', desc: 'Release, ambiente e sandbox.', fields: [
-    { id: 'cadence', type: 'select', label: 'Cadência de release', hint: 'Se maior que a da org, custo político mata a entrega.', required: true,
-      options: [ ['','Selecione…'], ['weekly','Semanal ou mais frequente'], ['biweekly','Quinzenal'], ['monthly','Mensal'], ['quarterly','Trimestral'] ] },
-    { id: 'requiresCanaryRelease', type: 'select', label: 'Requer canary/feature-flag release?',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] },
-    { id: 'requiresCoordinatedSandbox', type: 'select', label: 'Requer refresh de sandbox coordenado?', hint: 'Processo com CDC/PE inter-sandbox exige refresh coordenado.',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
-  ]},
-  { title: 'Integrações e event bus', desc: 'Contratos entre orgs, Platform Events, tenants externos.', fields: [
-    { id: 'integratesWithOrgs', type: 'text', label: 'Integra com outras orgs (nomes)', hint: 'Ex: OrgCartoes, OrgSeguros.' },
-    { id: 'maxInterOrgLatencyMs', type: 'text', label: 'SLA de latência inter-org (ms)', hint: 'P95 aceitável. 0 = sem exigência.' },
-    { id: 'publishesEvents', type: 'text', label: 'Platform Events publicados pelo processo', hint: 'Formato: nome[:eventos/dia]. Ex: AccountCDC, CustomerLifecycleEvent:50000.' },
-    { id: 'consumesEvents', type: 'text', label: 'Platform Events consumidos pelo processo', hint: 'Ex: SanctionsHit, PaymentAuthorizedEvent.' },
-    { id: 'requiresCdc', type: 'text', label: 'CDC entities exigidos', hint: 'Ex: Account, Contact, CustomObject__c.' },
-    { id: 'requiresPubSubApi', type: 'select', label: 'Exige Pub/Sub API (gRPC)?', hint: 'Arquitetura event-driven moderna.',
-      options: [ ['','Selecione…'], ['false','Não (tolera CometD)'], ['true','Sim (gRPC Pub/Sub)'] ] },
-    { id: 'externalFeeds', type: 'text', label: 'Feeds externos exigidos', hint: 'Ex: sanctions, kyc, creditbureau.' },
-    { id: 'requiredTenants', type: 'text', label: 'Tenants externos exigidos', hint: 'Ex: marketingCloud, auth0, sap.' }
-  ]},
-  { title: 'Packages e namespace', desc: 'Managed packages, licenças de terceiros e conflitos.', fields: [
-    { id: 'requiresNamespace', type: 'text', label: 'Requer namespace específico?', hint: 'Se o processo virá de AppExchange ou usa namespace reservado.' },
-    { id: 'modifiesPackageNamespace', type: 'text', label: 'Modifica metadata de package instalado?', hint: 'Namespace do package que o processo altera.' },
-    { id: 'requiredPackageVersionsJson', type: 'text', label: 'Versões mínimas de packages (JSON)', hint: 'Ex: {"cpq":"244.0","industry_pkg":"2.5.0"}. Motor valida versão instalada por namespace.' },
-    { id: 'dependsOnVendorContracts', type: 'text', label: 'Vendors críticos (contratos)', hint: 'Lista separada por vírgula. Motor avisa se algum está expirando.' }
-  ]},
-  { title: 'Localização', desc: 'Timezone, idiomas.', fields: [
-    { id: 'targetTimezone', type: 'text', label: 'Timezone do processo', hint: 'Ex: America/Sao_Paulo, multi, global.' },
-    { id: 'requiredLanguages', type: 'text', label: 'Idiomas exigidos', hint: 'Lista separada por vírgula. Ex: pt_BR, en_US.' }
-  ]},
-  { title: 'Time, custo e capacidade humana', desc: 'Bench, licenças, budget recorrente.', fields: [
-    { id: 'newUsers', type: 'text', label: 'Novos usuários que o processo adiciona', hint: 'Estimativa de headcount de usuários finais.' },
-    { id: 'userLicenseRequired', type: 'select', label: 'Tipo de licença exigido', hint: 'Motor valida disponibilidade.',
-      options: [ ['','(qualquer / não especificado)'], ['Salesforce','Salesforce'], ['Platform','Platform'], ['ExperienceCloud','Experience Cloud'] ] },
-    { id: 'monthlyBudgetUSD', type: 'text', label: 'Budget mensal recorrente (US$)', hint: 'Motor projeta users × custo + add-ons.' },
-    { id: 'requiredHeadcount', type: 'text', label: 'FTE do time dev exigido', hint: 'Estimativa de headcount técnico.' },
-    { id: 'requiredSkills', type: 'text', label: 'Skills técnicas exigidas', hint: 'Ex: apex, lwc, flow, integration.' },
-    { id: 'hasHighConsumption', type: 'select', label: 'Alto consumo (Data Cloud/Agentforce credit)?', hint: 'Exige FinOps observability.',
-      options: [ ['','Selecione…'], ['false','Não'], ['true','Sim'] ] }
-  ]},
-  { title: 'Backup, DR e migração', desc: 'RTO/RPO exigidos, custo de migração one-off.', fields: [
-    { id: 'requiredRtoHours', type: 'text', label: 'RTO exigido (horas)', hint: 'Recovery Time Objective. Vazio = 24h.' },
-    { id: 'requiredRpoHours', type: 'text', label: 'RPO exigido (horas)', hint: 'Recovery Point Objective. Vazio = 24h.' },
-    { id: 'permSetsToClone', type: 'text', label: 'Migração: perm sets a clonar', hint: 'Estimativa quantitativa.' },
-    { id: 'triggersToRefactor', type: 'text', label: 'Migração: triggers a refatorar', hint: 'Estimativa quantitativa.' },
-    { id: 'flowsToMigrate', type: 'text', label: 'Migração: flows a migrar', hint: 'Estimativa quantitativa.' }
-  ]}
+// Definições de processo: só IDs e tipos; labels/hints/opções via chaves i18n.
+// Helpers para gerar arrays de options mais compactos:
+const yesNo = (falseKey, trueKey) => [
+  ['', t('common.opt.placeholder')],
+  ['false', falseKey ? t(falseKey) : t('common.opt.no')],
+  ['true', trueKey ? t(trueKey) : t('common.opt.yes')]
 ];
 
-const processFields = processSections.flatMap(s => s.fields);
+function buildProcessSections() {
+  return [
+    { titleKey: 'proc.section.identification.title', descKey: 'proc.section.identification.desc', fields: [
+      { id: 'name', type: 'text', labelKey: 'proc.name.label', hintKey: 'proc.name.hint', required: true },
+      { id: 'lobOwner', type: 'text', labelKey: 'proc.lobOwner.label', hintKey: 'proc.lobOwner.hint', required: true },
+      { id: 'criticality', type: 'select', labelKey: 'proc.criticality.label', hintKey: 'proc.criticality.hint',
+        options: [ ['', t('proc.criticality.opt.placeholder')], ['low', t('proc.criticality.opt.low')], ['medium', t('proc.criticality.opt.medium')], ['high', t('proc.criticality.opt.high')], ['critical', t('proc.criticality.opt.critical')] ] }
+    ]},
+    { titleKey: 'proc.section.regulatory.title', descKey: 'proc.section.regulatory.desc', fields: [
+      { id: 'regulator', type: 'select', labelKey: 'proc.regulator.label', hintKey: 'proc.regulator.hint', required: true,
+        options: [ ['', t('common.opt.placeholder')], ['NONE', t('proc.regulator.opt.NONE')], ['LGPD', t('proc.regulator.opt.LGPD')], ['BACEN', t('proc.regulator.opt.BACEN')], ['CVM', t('proc.regulator.opt.CVM')], ['SUSEP', t('proc.regulator.opt.SUSEP')], ['PREVIC', t('proc.regulator.opt.PREVIC')], ['ANS', t('proc.regulator.opt.ANS')], ['ANEEL', t('proc.regulator.opt.ANEEL')], ['ANATEL', t('proc.regulator.opt.ANATEL')], ['GDPR', t('proc.regulator.opt.GDPR')], ['CCPA', t('proc.regulator.opt.CCPA')], ['HIPAA', t('proc.regulator.opt.HIPAA')], ['OTHER', t('proc.regulator.opt.OTHER')] ] },
+      { id: 'dataController', type: 'select', labelKey: 'proc.dataController.label', hintKey: 'proc.dataController.hint', required: true,
+        options: [ ['', t('common.opt.placeholder')], ['SAME', t('proc.dataController.opt.SAME')], ['DIFFERENT', t('proc.dataController.opt.DIFFERENT')], ['UNKNOWN', t('proc.dataController.opt.UNKNOWN')] ] },
+      { id: 'complianceScope', type: 'checkbox', labelKey: 'proc.complianceScope.label',
+        options: [ ['pci', t('proc.complianceScope.opt.pci')], ['sox', t('proc.complianceScope.opt.sox')] ] },
+      { id: 'requiresConsentFramework', type: 'select', labelKey: 'proc.requiresConsentFramework.label', hintKey: 'proc.requiresConsentFramework.hint',
+        options: [ ['', t('common.opt.placeholder')], ['false', t('common.opt.no')], ['true', t('proc.requiresConsentFramework.opt.true')] ] },
+      { id: 'requiresDataMasking', type: 'select', labelKey: 'proc.requiresDataMasking.label', hintKey: 'proc.requiresDataMasking.hint',
+        options: yesNo() }
+    ]},
+    { titleKey: 'proc.section.dataArch.title', descKey: 'proc.section.dataArch.desc', fields: [
+      { id: 'dataModel', type: 'select', labelKey: 'proc.dataModel.label', hintKey: 'proc.dataModel.hint', required: true,
+        options: [ ['', t('common.opt.placeholder')], ['b2b', t('proc.dataModel.opt.b2b')], ['personAccount', t('proc.dataModel.opt.personAccount')], ['fsc', t('proc.dataModel.opt.fsc')], ['healthcloud', t('proc.dataModel.opt.healthcloud')], ['nonprofit', t('proc.dataModel.opt.nonprofit')], ['education', t('proc.dataModel.opt.education')], ['manufacturing', t('proc.dataModel.opt.manufacturing')], ['custom', t('proc.dataModel.opt.custom')] ] },
+      { id: 'features', type: 'checkbox', labelKey: 'proc.features.label',
+        options: [ ['multiCurrency', 'Multi-Currency'], ['shield', 'Shield Encryption'], ['fat', 'Field Audit Trail'], ['eventMonitoring', 'Event Monitoring'], ['dataCloud', 'Data Cloud'], ['agentforce', 'Agentforce'], ['experienceCloud', 'Experience Cloud'] ] },
+      { id: 'requiredSharingModel', type: 'select', labelKey: 'proc.requiredSharingModel.label', hintKey: 'proc.requiredSharingModel.hint',
+        options: [ ['', t('proc.requiredSharingModel.opt.any')], ['private', t('proc.requiredSharingModel.opt.private')], ['public', t('proc.requiredSharingModel.opt.public')], ['controlled', t('proc.requiredSharingModel.opt.controlled')] ] },
+      { id: 'touchesMasterDataEntities', type: 'text', labelKey: 'proc.touchesMasterDataEntities.label', hintKey: 'proc.touchesMasterDataEntities.hint' },
+      { id: 'masterDataRole', type: 'select', labelKey: 'proc.masterDataRole.label', hintKey: 'proc.masterDataRole.hint',
+        options: [ ['', t('common.opt.placeholder')], ['owner', t('proc.masterDataRole.opt.owner')], ['consumer', t('proc.masterDataRole.opt.consumer')] ] },
+      { id: 'requiredFieldHistoryMonths', type: 'text', labelKey: 'proc.requiredFieldHistoryMonths.label', hintKey: 'proc.requiredFieldHistoryMonths.hint' },
+      { id: 'requiresBigObjects', type: 'select', labelKey: 'proc.requiresBigObjects.label', options: yesNo() }
+    ]},
+    { titleKey: 'proc.section.capacity.title', descKey: 'proc.section.capacity.desc', fields: [
+      { id: 'estimatedRecordsPerYear', type: 'text', labelKey: 'proc.estimatedRecordsPerYear.label', hintKey: 'proc.estimatedRecordsPerYear.hint' },
+      { id: 'estimatedApiCallsDaily', type: 'text', labelKey: 'proc.estimatedApiCallsDaily.label', hintKey: 'proc.estimatedApiCallsDaily.hint' },
+      { id: 'peakApiPerSec', type: 'text', labelKey: 'proc.peakApiPerSec.label', hintKey: 'proc.peakApiPerSec.hint' },
+      { id: 'peakEventsPerSec', type: 'text', labelKey: 'proc.peakEventsPerSec.label', hintKey: 'proc.peakEventsPerSec.hint' },
+      { id: 'usesLongRunning', type: 'select', labelKey: 'proc.usesLongRunning.label', options: yesNo() },
+      { id: 'usesFuture', type: 'select', labelKey: 'proc.usesFuture.label', options: yesNo() },
+      { id: 'usesQueueable', type: 'select', labelKey: 'proc.usesQueueable.label', options: yesNo() }
+    ]},
+    { titleKey: 'proc.section.cadence.title', descKey: 'proc.section.cadence.desc', fields: [
+      { id: 'cadence', type: 'select', labelKey: 'proc.cadence.label', hintKey: 'proc.cadence.hint', required: true,
+        options: [ ['', t('common.opt.placeholder')], ['weekly', t('proc.cadence.opt.weekly')], ['biweekly', t('proc.cadence.opt.biweekly')], ['monthly', t('proc.cadence.opt.monthly')], ['quarterly', t('proc.cadence.opt.quarterly')] ] },
+      { id: 'requiresCanaryRelease', type: 'select', labelKey: 'proc.requiresCanaryRelease.label', options: yesNo() },
+      { id: 'requiresCoordinatedSandbox', type: 'select', labelKey: 'proc.requiresCoordinatedSandbox.label', hintKey: 'proc.requiresCoordinatedSandbox.hint', options: yesNo() }
+    ]},
+    { titleKey: 'proc.section.integration.title', descKey: 'proc.section.integration.desc', fields: [
+      { id: 'integratesWithOrgs', type: 'text', labelKey: 'proc.integratesWithOrgs.label', hintKey: 'proc.integratesWithOrgs.hint' },
+      { id: 'maxInterOrgLatencyMs', type: 'text', labelKey: 'proc.maxInterOrgLatencyMs.label', hintKey: 'proc.maxInterOrgLatencyMs.hint' },
+      { id: 'publishesEvents', type: 'text', labelKey: 'proc.publishesEvents.label', hintKey: 'proc.publishesEvents.hint' },
+      { id: 'consumesEvents', type: 'text', labelKey: 'proc.consumesEvents.label', hintKey: 'proc.consumesEvents.hint' },
+      { id: 'requiresCdc', type: 'text', labelKey: 'proc.requiresCdc.label', hintKey: 'proc.requiresCdc.hint' },
+      { id: 'requiresPubSubApi', type: 'select', labelKey: 'proc.requiresPubSubApi.label', hintKey: 'proc.requiresPubSubApi.hint',
+        options: [ ['', t('common.opt.placeholder')], ['false', t('proc.requiresPubSubApi.opt.false')], ['true', t('proc.requiresPubSubApi.opt.true')] ] },
+      { id: 'externalFeeds', type: 'text', labelKey: 'proc.externalFeeds.label', hintKey: 'proc.externalFeeds.hint' },
+      { id: 'requiredTenants', type: 'text', labelKey: 'proc.requiredTenants.label', hintKey: 'proc.requiredTenants.hint' }
+    ]},
+    { titleKey: 'proc.section.packages.title', descKey: 'proc.section.packages.desc', fields: [
+      { id: 'requiresNamespace', type: 'text', labelKey: 'proc.requiresNamespace.label', hintKey: 'proc.requiresNamespace.hint' },
+      { id: 'modifiesPackageNamespace', type: 'text', labelKey: 'proc.modifiesPackageNamespace.label', hintKey: 'proc.modifiesPackageNamespace.hint' },
+      { id: 'requiredPackageVersionsJson', type: 'text', labelKey: 'proc.requiredPackageVersionsJson.label', hintKey: 'proc.requiredPackageVersionsJson.hint' },
+      { id: 'dependsOnVendorContracts', type: 'text', labelKey: 'proc.dependsOnVendorContracts.label', hintKey: 'proc.dependsOnVendorContracts.hint' }
+    ]},
+    { titleKey: 'proc.section.localization.title', descKey: 'proc.section.localization.desc', fields: [
+      { id: 'targetTimezone', type: 'text', labelKey: 'proc.targetTimezone.label', hintKey: 'proc.targetTimezone.hint' },
+      { id: 'requiredLanguages', type: 'text', labelKey: 'proc.requiredLanguages.label', hintKey: 'proc.requiredLanguages.hint' }
+    ]},
+    { titleKey: 'proc.section.team.title', descKey: 'proc.section.team.desc', fields: [
+      { id: 'newUsers', type: 'text', labelKey: 'proc.newUsers.label', hintKey: 'proc.newUsers.hint' },
+      { id: 'userLicenseRequired', type: 'select', labelKey: 'proc.userLicenseRequired.label', hintKey: 'proc.userLicenseRequired.hint',
+        options: [ ['', t('proc.userLicenseRequired.opt.any')], ['Salesforce', 'Salesforce'], ['Platform', 'Platform'], ['ExperienceCloud', 'Experience Cloud'] ] },
+      { id: 'monthlyBudgetUSD', type: 'text', labelKey: 'proc.monthlyBudgetUSD.label', hintKey: 'proc.monthlyBudgetUSD.hint' },
+      { id: 'requiredHeadcount', type: 'text', labelKey: 'proc.requiredHeadcount.label', hintKey: 'proc.requiredHeadcount.hint' },
+      { id: 'requiredSkills', type: 'text', labelKey: 'proc.requiredSkills.label', hintKey: 'proc.requiredSkills.hint' },
+      { id: 'hasHighConsumption', type: 'select', labelKey: 'proc.hasHighConsumption.label', hintKey: 'proc.hasHighConsumption.hint', options: yesNo() }
+    ]},
+    { titleKey: 'proc.section.dr.title', descKey: 'proc.section.dr.desc', fields: [
+      { id: 'requiredRtoHours', type: 'text', labelKey: 'proc.requiredRtoHours.label', hintKey: 'proc.requiredRtoHours.hint' },
+      { id: 'requiredRpoHours', type: 'text', labelKey: 'proc.requiredRpoHours.label', hintKey: 'proc.requiredRpoHours.hint' },
+      { id: 'permSetsToClone', type: 'text', labelKey: 'proc.permSetsToClone.label', hintKey: 'proc.permSetsToClone.hint' },
+      { id: 'triggersToRefactor', type: 'text', labelKey: 'proc.triggersToRefactor.label', hintKey: 'proc.triggersToRefactor.hint' },
+      { id: 'flowsToMigrate', type: 'text', labelKey: 'proc.flowsToMigrate.label', hintKey: 'proc.flowsToMigrate.hint' }
+    ]}
+  ];
+}
+
+let processSections = buildProcessSections();
+
+function getProcessFields() { return processSections.flatMap(s => s.fields); }
 
 function renderProcessForm() {
   const root = document.getElementById('processForm');
+  root.innerHTML = '';
   processSections.forEach((section, idx) => {
     const secHeader = document.createElement('div');
     secHeader.className = 'process-section-header';
-    secHeader.innerHTML = `<div class="process-section-title">${section.title}</div>${section.desc ? `<div class="process-section-desc">${section.desc}</div>` : ''}`;
+    const descHtml = section.descKey ? `<div class="process-section-desc">${t(section.descKey)}</div>` : '';
+    secHeader.innerHTML = `<div class="process-section-title">${t(section.titleKey)}</div>${descHtml}`;
     if (idx > 0) secHeader.style.marginTop = '18px';
     root.appendChild(secHeader);
 
@@ -1421,15 +1339,16 @@ function renderProcessForm() {
       const wrap = document.createElement('div');
       wrap.className = 'process-field';
       const label = document.createElement('label');
-      label.textContent = f.label + (f.required ? ' *' : '');
+      label.textContent = t(f.labelKey) + (f.required ? ' *' : '');
       label.htmlFor = 'pf_' + f.id;
       wrap.appendChild(label);
-      if (f.hint) {
-        const h = document.createElement('div'); h.className = 'hint'; h.textContent = f.hint; wrap.appendChild(h);
+      if (f.hintKey) {
+        const h = document.createElement('div'); h.className = 'hint'; h.textContent = t(f.hintKey); wrap.appendChild(h);
       }
       if (f.type === 'text') {
         const input = document.createElement('input');
         input.type = 'text'; input.id = 'pf_' + f.id;
+        if (state.process[f.id]) input.value = state.process[f.id];
         input.addEventListener('input', () => {
           if (f.id === 'requiredPackageVersionsJson') {
             state.process.requiredPackageVersions = safeParseJson(input.value.trim()) || {};
@@ -1445,14 +1364,16 @@ function renderProcessForm() {
         f.options.forEach(([v, lbl]) => {
           const o = document.createElement('option'); o.value = v; o.textContent = lbl; sel.appendChild(o);
         });
+        if (state.process[f.id]) sel.value = state.process[f.id];
         sel.addEventListener('change', () => { state.process[f.id] = sel.value; updateAllocationButton(); });
         wrap.appendChild(sel);
       } else if (f.type === 'checkbox') {
-        state.process[f.id] = [];
+        if (!Array.isArray(state.process[f.id])) state.process[f.id] = [];
         const grid = document.createElement('div'); grid.className = 'checkbox-grid';
         f.options.forEach(([v, lbl]) => {
           const label = document.createElement('label'); label.className = 'check-opt';
           const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = v;
+          if (state.process[f.id].includes(v)) { cb.checked = true; label.classList.add('selected'); }
           cb.addEventListener('change', () => {
             const arr = state.process[f.id];
             if (cb.checked && !arr.includes(v)) arr.push(v);
@@ -1474,7 +1395,7 @@ function renderProcessForm() {
 function safeParseJson(v) { if (!v) return null; try { return JSON.parse(v); } catch { return null; } }
 
 function updateAllocationButton() {
-  const requiredIds = processFields.filter(f => f.required).map(f => f.id);
+  const requiredIds = getProcessFields().filter(f => f.required).map(f => f.id);
   const filled = requiredIds.every(id => {
     const v = state.process[id];
     return v && String(v).length > 0;
@@ -1482,9 +1403,9 @@ function updateAllocationButton() {
   const hasMeta = state.metadata.length > 0;
   const btn = document.getElementById('runAllocationBtn');
   btn.disabled = !(filled && hasMeta);
-  btn.textContent = !hasMeta ? 'Carregue metadata das orgs acima para continuar'
-                  : !filled ? 'Preencha os campos obrigatórios (*)'
-                  : `Filtrar ${state.metadata.length} org(s) candidatas`;
+  btn.textContent = !hasMeta ? t('alloc.button.needsMeta')
+                  : !filled ? t('alloc.button.needsFields')
+                  : t('alloc.button.ready', { count: state.metadata.length });
 }
 
 // ---- Motor de filtragem em cascata ----
@@ -1520,32 +1441,32 @@ function renderAllocationResult(evaluations, proc, landscape) {
   switch (landscape.recommendation) {
     case 'reuse':
       hero.classList.add('single', 'result-single');
-      eyebrow = 'Recomendação · reuso qualificado';
-      title = `Aloque em ${landscape.primaryChoice}`;
+      eyebrow = t('alloc.result.reuse.eyebrow');
+      title = t('alloc.result.reuse.title', { org: landscape.primaryChoice });
       summary = landscape.summary;
       break;
     case 'reuse-with-warnings':
       hero.classList.add('borderline', 'result-borderline');
-      eyebrow = 'Recomendação · reuso com ressalvas';
-      title = `Melhor candidata: ${landscape.primaryChoice}`;
+      eyebrow = t('alloc.result.reuseWithWarnings.eyebrow');
+      title = t('alloc.result.reuseWithWarnings.title', { org: landscape.primaryChoice });
       summary = landscape.summary;
       break;
     case 'consolidate-first':
       hero.classList.add('borderline', 'result-borderline');
-      eyebrow = 'Recomendação · consolidar antes de alocar';
-      title = `Consolidar ${Array.isArray(landscape.primaryChoice) ? landscape.primaryChoice.join(' + ') : landscape.primaryChoice}`;
+      eyebrow = t('alloc.result.consolidate.eyebrow');
+      title = t('alloc.result.consolidate.title', { org: Array.isArray(landscape.primaryChoice) ? landscape.primaryChoice.join(' + ') : landscape.primaryChoice });
       summary = landscape.summary;
       break;
     case 'new-org':
       hero.classList.add('multi-hub', 'result-multi');
-      eyebrow = 'Recomendação · nova org justificada';
-      title = 'Criar nova org é a escolha correta';
+      eyebrow = t('alloc.result.newOrg.eyebrow');
+      title = t('alloc.result.newOrg.title');
       summary = landscape.summary;
       break;
     default: // no-viable-option
       hero.classList.add('multi-hub', 'result-multi');
-      eyebrow = 'Recomendação · sem opção viável';
-      title = 'Nenhuma org atende ao perfil';
+      eyebrow = t('alloc.result.noViable.eyebrow');
+      title = t('alloc.result.noViable.title');
       summary = landscape.summary;
   }
   hero.innerHTML = `
@@ -1553,25 +1474,8 @@ function renderAllocationResult(evaluations, proc, landscape) {
     <div class="result-title">${title}</div>
     <p class="result-summary">${summary}</p>
     <details class="score-explainer">
-      <summary>Como o score e o ranking são calculados</summary>
-      <div class="score-explainer-body">
-        <p>Cada org é avaliada em <strong>45 filtros independentes</strong> agrupados nas seções do formulário (regulatório, arquitetura, capacidade, integrações, packages, backup, team, custo, etc). Cada filtro devolve <code>pass</code>, <code>warn</code> ou <code>fail</code>.</p>
-        <p><strong>Score numérico</strong> — soma linear por filtro:</p>
-        <ul>
-          <li><code>pass</code> = <strong>+3</strong></li>
-          <li><code>warn</code> = <strong>+1</strong></li>
-          <li><code>fail</code> = <strong>−2</strong></li>
-        </ul>
-        <p><strong>Ponderação por criticidade</strong> — só o lado negativo escala. Um <code>fail</code> num processo <code>critical</code> conta como <strong>3×</strong>; num <code>high</code>, 2×; num <code>medium</code>, 1× (referência); num <code>low</code>, 0.5×. <code>pass</code>/<code>warn</code> valem igual para qualquer criticidade. Motivo: um bloqueador legal num processo crítico é bem mais grave que num processo de baixa prioridade, mas um bom fit não é "melhor" por criticidade.</p>
-        <p>Faixa prática: 80-130 é uma org com dados completos e poucas ressalvas; 40-70 indica que muitos campos ficaram vazios (não é sinal de "org ruim", é sinal de "falta informação"). Score bruto <code>scoreRaw</code> (sem ponderação) fica disponível como referência.</p>
-        <p><strong>Status agregado (<code>overall</code>)</strong> é <em>independente do score</em>: basta <strong>um único filtro</strong> em <code>fail</code> para a org inteira ser <code>fail</code>; senão, <code>warn</code> se houver algum warn, senão <code>pass</code>.</p>
-        <p><strong>Ranking</strong> ocorre em duas passadas:</p>
-        <ol>
-          <li>Status primeiro: <code>pass</code> &lt; <code>warn</code> &lt; <code>fail</code> — uma org <code>pass</code> com score baixo <em>sempre</em> vem antes de uma org <code>warn</code> com score alto.</li>
-          <li>Score ponderado desempata entre orgs com o mesmo status.</li>
-        </ol>
-        <p><strong>Limitação remanescente:</strong> filtros ainda pesam igual entre si — um <code>regulator=fail</code> (bloqueador legal) conta o mesmo que um <code>documentation=fail</code>. O score é <strong>orientativo</strong>. A leitura arquitetural exige olhar quais filtros falharam, não só o número.</p>
-      </div>
+      <summary>${t('alloc.result.explainer.summary')}</summary>
+      <div class="score-explainer-body">${t('alloc.result.explainer.body')}</div>
     </details>
   `;
   el.appendChild(hero);
@@ -1580,13 +1484,14 @@ function renderAllocationResult(evaluations, proc, landscape) {
   if (landscape.consolidations.length || landscape.rebalancing.length || landscape.newOrgRationale.length) {
     const ecoCard = document.createElement('div');
     ecoCard.className = 'card';
-    ecoCard.innerHTML = `<p class="section-title">Visão do ecossistema (${landscape.stats.total} org${landscape.stats.total > 1 ? 's' : ''} avaliada${landscape.stats.total > 1 ? 's' : ''})</p>
-      <p class="section-sub">Análise que olha o landscape inteiro, não org-por-org. Traz consolidações possíveis, oportunidades de rebalanceamento e critérios positivos para justificar uma org nova.</p>`;
+    const plural = landscape.stats.total > 1 ? 's' : '';
+    ecoCard.innerHTML = `<p class="section-title">${t('alloc.ecosystem.title', { total: landscape.stats.total, plural })}</p>
+      <p class="section-sub">${t('alloc.ecosystem.sub')}</p>`;
 
     if (landscape.newOrgRationale.length) {
       const div = document.createElement('div');
       div.className = 'eco-block eco-neworg';
-      div.innerHTML = `<strong>Critérios positivos para nova org (${landscape.newOrgRationale.length})</strong>`;
+      div.innerHTML = `<strong>${t('alloc.ecosystem.newOrg', { count: landscape.newOrgRationale.length })}</strong>`;
       const ul = document.createElement('ul');
       landscape.newOrgRationale.forEach(r => {
         const li = document.createElement('li');
@@ -1600,7 +1505,7 @@ function renderAllocationResult(evaluations, proc, landscape) {
     if (landscape.consolidations.length) {
       const div = document.createElement('div');
       div.className = 'eco-block eco-consolid';
-      div.innerHTML = `<strong>Consolidações possíveis (${landscape.consolidations.length})</strong>`;
+      div.innerHTML = `<strong>${t('alloc.ecosystem.consolidations', { count: landscape.consolidations.length })}</strong>`;
       const ul = document.createElement('ul');
       landscape.consolidations.forEach(c => {
         const li = document.createElement('li');
@@ -1614,7 +1519,7 @@ function renderAllocationResult(evaluations, proc, landscape) {
     if (landscape.rebalancing.length) {
       const div = document.createElement('div');
       div.className = 'eco-block eco-rebalance';
-      div.innerHTML = `<strong>Load rebalancing (${landscape.rebalancing.length})</strong>`;
+      div.innerHTML = `<strong>${t('alloc.ecosystem.rebalancing', { count: landscape.rebalancing.length })}</strong>`;
       const ul = document.createElement('ul');
       landscape.rebalancing.forEach(r => {
         const li = document.createElement('li');
@@ -1631,13 +1536,15 @@ function renderAllocationResult(evaluations, proc, landscape) {
   // Perfil resumido
   const profileCard = document.createElement('div');
   profileCard.className = 'card';
+  const featuresLine = (proc.features || []).length ? proc.features.join(', ') : t('alloc.profile.none');
+  const volumeVal = proc.estimatedRecordsPerYear ? t('alloc.profile.volumeYear', { n: proc.estimatedRecordsPerYear }) : '-';
   profileCard.innerHTML = `
-    <p class="section-title">Perfil do processo</p>
+    <p class="section-title">${t('alloc.profile.title')}</p>
     <div style="font-size:13px;color:var(--ink-soft);line-height:1.7;">
-      <strong style="color:var(--ink);">${escapeHtml(proc.name || '(sem nome)')}</strong> · LOB: ${escapeHtml(proc.lobOwner || '-')}<br>
-      Regulador: <strong>${proc.regulator || '-'}</strong> · Data controller LGPD: <strong>${proc.dataController || '-'}</strong><br>
-      Data model: <strong>${proc.dataModel || '-'}</strong> · Cadência: <strong>${proc.cadence || '-'}</strong> · Volume: <strong>${proc.estimatedRecordsPerYear ? proc.estimatedRecordsPerYear + ' registros/ano' : '-'}</strong><br>
-      Features: ${(proc.features || []).length ? proc.features.join(', ') : '<em>nenhuma</em>'}
+      <strong style="color:var(--ink);">${escapeHtml(proc.name || t('alloc.profile.noName'))}</strong> · ${t('alloc.profile.lob')}: ${escapeHtml(proc.lobOwner || '-')}<br>
+      ${t('alloc.profile.regulator')}: <strong>${proc.regulator || '-'}</strong> · ${t('alloc.profile.dataController')}: <strong>${proc.dataController || '-'}</strong><br>
+      ${t('alloc.profile.dataModel')}: <strong>${proc.dataModel || '-'}</strong> · ${t('alloc.profile.cadence')}: <strong>${proc.cadence || '-'}</strong> · ${t('alloc.profile.volume')}: <strong>${volumeVal}</strong><br>
+      ${t('alloc.profile.features')}: ${featuresLine}
     </div>
   `;
   el.appendChild(profileCard);
@@ -1645,17 +1552,18 @@ function renderAllocationResult(evaluations, proc, landscape) {
   // Ranking
   const rankingCard = document.createElement('div');
   rankingCard.className = 'card';
-  rankingCard.innerHTML = `<p class="section-title">Ranking de candidatas (${evaluations.length} org${evaluations.length>1?'s':''})</p>`;
+  const rankPlural = evaluations.length > 1 ? 's' : '';
+  rankingCard.innerHTML = `<p class="section-title">${t('alloc.ranking.title', { count: evaluations.length, plural: rankPlural })}</p>`;
 
-  const sections = [['pass','Elegíveis — passam em todos os filtros', passing],
-                    ['warn','Elegíveis com ressalvas — resolver warnings antes', warning],
-                    ['fail','Inelegíveis — bloqueadores hard', failing]];
-  sections.forEach(([status, label, list]) => {
+  const sections = [['pass', 'alloc.ranking.pass', passing],
+                    ['warn', 'alloc.ranking.warn', warning],
+                    ['fail', 'alloc.ranking.fail', failing]];
+  sections.forEach(([status, labelKey, list]) => {
     if (list.length === 0) return;
     const h = document.createElement('h3');
     h.className = 'org-rank ' + status;
     h.style.margin = '18px 0 8px'; h.style.fontSize = '11px';
-    h.textContent = `${label} (${list.length})`;
+    h.textContent = t(labelKey, { count: list.length });
     rankingCard.appendChild(h);
     list.forEach((ev, idx) => {
       const card = document.createElement('details');
@@ -1664,8 +1572,8 @@ function renderAllocationResult(evaluations, proc, landscape) {
       const failCount = ev.filters.filter(f => f.status === 'fail').length;
       const warnCount = ev.filters.filter(f => f.status === 'warn').length;
       const passCount = ev.filters.filter(f => f.status === 'pass').length;
-      const summaryCounts = `<span class="org-card-counts"><span class="cnt pass">${passCount} pass</span><span class="cnt warn">${warnCount} warn</span><span class="cnt fail">${failCount} fail</span></span>`;
-      const head = `<summary class="org-card-summary"><div class="org-card-head"><h4>${idx === 0 && status === 'pass' ? '🏆 ' : ''}${escapeHtml(ev.org.orgName)}${ev.org.lobOwner ? ` <span style="font-weight:400;font-size:12px;color:var(--ink-soft);">· ${escapeHtml(ev.org.lobOwner)}</span>` : ''}</h4><span class="org-rank ${ev.overall}">${summaryCounts} <span class="org-score">score ${ev.score}</span></span></div></summary>`;
+      const summaryCounts = `<span class="org-card-counts"><span class="cnt pass">${t('alloc.ranking.pass.short', { count: passCount })}</span><span class="cnt warn">${t('alloc.ranking.warn.short', { count: warnCount })}</span><span class="cnt fail">${t('alloc.ranking.fail.short', { count: failCount })}</span></span>`;
+      const head = `<summary class="org-card-summary"><div class="org-card-head"><h4>${idx === 0 && status === 'pass' ? '🏆 ' : ''}${escapeHtml(ev.org.orgName)}${ev.org.lobOwner ? ` <span style="font-weight:400;font-size:12px;color:var(--ink-soft);">· ${escapeHtml(ev.org.lobOwner)}</span>` : ''}</h4><span class="org-rank ${ev.overall}">${summaryCounts} <span class="org-score">${t('alloc.ranking.score', { score: ev.score })}</span></span></div></summary>`;
       const chips = ev.filters.map(f => `<span class="filter-chip ${f.status}">${f.label}: ${f.status.toUpperCase()}</span>`).join('');
       const detail = ev.filters.map(f => `<li><strong style="color:var(--ink);">${f.label}:</strong> ${escapeHtml(f.reason)}</li>`).join('');
       card.innerHTML = `${head}<div class="org-card-body"><div class="filter-row">${chips}</div><ul class="org-detail">${detail}</ul></div>`;
@@ -1677,8 +1585,8 @@ function renderAllocationResult(evaluations, proc, landscape) {
   // Alternativas técnicas (sempre exibe — o framework manda esgotar antes de criar org nova)
   const altCard = document.createElement('div');
   altCard.className = 'card';
-  altCard.innerHTML = `<p class="section-title">Alternativas técnicas antes de criar nova org</p>
-    <p class="section-sub">Em landscape com muitas orgs, criar mais uma tem custo direto (Full Copy, Shield replicado, licenças, DR, backup). Avalie estas opções primeiro:</p>`;
+  altCard.innerHTML = `<p class="section-title">${t('alloc.alt.title')}</p>
+    <p class="section-sub">${t('alloc.alt.sub')}</p>`;
   const alts = generateAlternatives(proc, evaluations);
   alts.forEach(a => {
     const div = document.createElement('div');
@@ -1692,15 +1600,15 @@ function renderAllocationResult(evaluations, proc, landscape) {
   if (passing.length === 0 && warning.length === 0) {
     const sunset = document.createElement('div');
     sunset.className = 'sunset-block';
-    sunset.innerHTML = `<h4>Se nova org: plano de sunset obrigatório (24 meses)</h4>
+    sunset.innerHTML = `<h4>${t('alloc.sunset.title')}</h4>
       <ol>
-        <li><strong>Justificativa formal:</strong> qual bloqueador impede reuso (regulador, data controller, feature irreversível, capacidade).</li>
-        <li><strong>Sponsor executivo:</strong> nome + área. Sem sponsor, não abre.</li>
-        <li><strong>Data limite de consolidação:</strong> 24 meses após go-live. Se permanente por natureza, formalize no ARB — não como default.</li>
-        <li><strong>Contrato inter-partes LGPD</strong> se data controller distinto.</li>
-        <li><strong>Runbook DR + backup contract</strong> antes do go-live (não depois).</li>
-        <li><strong>ADR publicado</strong> em Confluence/Git — "Processo X foi para nova org porque…".</li>
-        <li><strong>Volte ao Modo Topologia</strong> para decidir a subtopologia (Hub-and-Spoke default, Federated apenas se sync bidirecional inescapável ou M&A transitório).</li>
+        <li>${t('alloc.sunset.step1')}</li>
+        <li>${t('alloc.sunset.step2')}</li>
+        <li>${t('alloc.sunset.step3')}</li>
+        <li>${t('alloc.sunset.step4')}</li>
+        <li>${t('alloc.sunset.step5')}</li>
+        <li>${t('alloc.sunset.step6')}</li>
+        <li>${t('alloc.sunset.step7')}</li>
       </ol>`;
     el.appendChild(sunset);
   }
@@ -1715,25 +1623,25 @@ function generateAlternatives(proc, evaluations) {
   const any2GP = state.metadata.some(o => o.package2Count > 0);
 
   if (proc.features && proc.features.includes('dataCloud')) {
-    alts.push({ title: 'Data Cloud como tenant lógico', body: `O processo já pede Data Cloud. ${anyDataCloud ? 'Uma ou mais orgs já têm Data Cloud habilitado — considere alocar como Data Space nessa org em vez de criar tenant novo.' : 'Data Cloud ainda não está habilitado em nenhuma org do landscape. Avalie custo de habilitar + arquitetar como hub de identidade.'}` });
+    alts.push({ title: t('alloc.alt.dataCloud.title'), body: t(anyDataCloud ? 'alloc.alt.dataCloud.processWants.enabled' : 'alloc.alt.dataCloud.processWants.notEnabled') });
   } else {
-    alts.push({ title: 'Data Cloud como tenant lógico', body: 'Se o processo precisa unificar dados entre orgs existentes (visão 360º de cliente), Data Cloud resolve sem criar CRM org nova. Read-heavy, com Data Actions para escrita orquestrada.' });
+    alts.push({ title: t('alloc.alt.dataCloud.title'), body: t('alloc.alt.dataCloud.generic') });
   }
 
-  alts.push({ title: 'Unlocked Package (2GP) numa org existente', body: any2GP
-    ? `${state.metadata.filter(o => o.package2Count > 0).length} org(s) do landscape já usam 2GP — modularize o processo como package independente, com release cadence própria, sem novo Full Copy sandbox.`
-    : 'Nenhuma org do landscape adota 2GP hoje. Se maturidade DevOps permitir, adotar 2GP resolve autonomia de release sem custo de licença adicional — é pré-requisito para modularizar dentro de single-org.'
+  alts.push({ title: t('alloc.alt.2gp.title'),
+    body: any2GP
+      ? t('alloc.alt.2gp.enabled', { count: state.metadata.filter(o => o.package2Count > 0).length })
+      : t('alloc.alt.2gp.notEnabled')
   });
 
   if (proc.features && proc.features.includes('experienceCloud')) {
-    alts.push({ title: 'Experience Cloud site + permission sets', body: `Processo pede Experience Cloud. ${anyExpCloud ? 'Já existe em uma ou mais orgs — crie um site dedicado com permission sets isolados nessa org, ao invés de tenant novo.' : 'Ativar Experience Cloud numa org existente + permission sets resolve isolamento de UX para parceiros/clientes sem criar CRM org nova.'}` });
+    alts.push({ title: t('alloc.alt.expCloud.title'), body: t(anyExpCloud ? 'alloc.alt.expCloud.processWants.enabled' : 'alloc.alt.expCloud.processWants.notEnabled') });
   } else {
-    alts.push({ title: 'Experience Cloud + permission sets', body: 'Se a demanda é isolar UX ou expor Setup para parceiro externo, um site Experience Cloud numa org existente resolve — permission sets isolados, guest user controlado.' });
+    alts.push({ title: t('alloc.alt.expCloud.generic.title'), body: t('alloc.alt.expCloud.generic') });
   }
 
-  alts.push({ title: 'MuleSoft como canonical layer', body: 'Se o processo precisa orquestrar entre orgs (ex: enriquecer com master data de outra BU), o custo está em MuleSoft/iPaaS, não em criar mais uma org Salesforce. Reduz acoplamento e evita duplicação de dados.' });
-
-  alts.push({ title: 'Shared services / org de plataforma', body: 'Em landscapes com muitas orgs, tipicamente existe uma "org de plataforma" ou corporativa que centraliza capabilities transversais (compliance, master data, gestão de leads, integração). Verifique se o processo cabe lá antes de propor uma org nova.' });
+  alts.push({ title: t('alloc.alt.mulesoft.title'), body: t('alloc.alt.mulesoft.desc') });
+  alts.push({ title: t('alloc.alt.shared.title'), body: t('alloc.alt.shared.desc') });
 
   return alts;
 }
@@ -1749,12 +1657,63 @@ document.getElementById('resetProcessBtn').addEventListener('click', () => {
     if (el.type === 'checkbox') { el.checked = false; el.closest('.check-opt').classList.remove('selected'); }
     else { el.value = ''; }
   });
-  processFields.filter(f => f.type === 'checkbox').forEach(f => { state.process[f.id] = []; });
+  getProcessFields().filter(f => f.type === 'checkbox').forEach(f => { state.process[f.id] = []; });
   document.getElementById('allocationResult').classList.remove('visible');
   document.getElementById('allocationResult').innerHTML = '';
   updateAllocationButton();
 });
 
+// ---- i18n static text + language switcher ----
+
+function applyStaticI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (!key) return;
+    el.textContent = t(key);
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    if (!key) return;
+    el.innerHTML = t(key);
+  });
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    if (!btn.classList.contains('copied')) btn.textContent = t('metadata.copyBtn');
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === getLang());
+  });
+}
+
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => setLang(btn.dataset.lang));
+});
+
+document.addEventListener('langchange', () => {
+  applyStaticI18n();
+  processSections = buildProcessSections();
+  renderQuestions();
+  document.querySelectorAll('.q').forEach(w => {
+    const q = questions.find(x => x.id === w.dataset.qid) || hubFedQuestions.find(x => x.id === w.dataset.qid);
+    const storeKey = questions.find(x => x.id === w.dataset.qid) ? 'answers' : 'hubFed';
+    refreshBadges(q, w, storeKey);
+  });
+  renderProcessForm();
+  updateProgress();
+  updateAllocationButton();
+  if (document.getElementById('metadataLoaded').classList.contains('visible') && state.metadata.length) {
+    renderMetadataLoaded(state.metadata, []);
+  }
+  // Re-render result panels if they are currently visible.
+  if (document.getElementById('result').classList.contains('visible')
+      && Object.keys(state.answers).length === questions.length) {
+    renderResult(compute());
+  }
+  if (document.getElementById('allocationResult').classList.contains('visible') && state.metadata.length) {
+    runAllocation();
+  }
+});
+
+applyStaticI18n();
 renderQuestions();
 updateProgress();
 renderProcessForm();

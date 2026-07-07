@@ -3,6 +3,9 @@
 // Rode com: node tests/advanced-tests.mjs
 
 import { normalizeOrgMetadata, evaluateOrgForProcess, analyzeLandscape } from '../allocation-engine.mjs';
+import { registerTranslations } from '../i18n.mjs';
+import { ptBR } from '../i18n/pt-BR.mjs';
+registerTranslations('pt-BR', ptBR);
 
 // helpers (reduzidos — mesmo padrão da suite principal)
 function goldOrg(overrides = {}) {
