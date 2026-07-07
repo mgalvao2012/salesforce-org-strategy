@@ -586,6 +586,7 @@ export const esES = {
   'engine.filter.capacity.critical': 'Capacidad crítica ({max}%): custom objects {obj}% · storage {storage}% · API {api}%.',
   'engine.filter.capacity.tight': 'Capacidad ajustada ({max}%): resolver holgura antes.',
   'engine.filter.capacity.ok': 'Holgura cómoda (max {max}%): custom objects {obj}% · storage {storage}% · API {api}%.',
+  'engine.filter.capacity.notMeasured': 'Capacidad no medida (storage / API / custom objects ausentes). Sin métricas no se puede afirmar holgura — recopila los límites antes de asignar.',
 
   // Filtro health (ApexGuru)
   'engine.filter.health.label': 'Salud operativa (ApexGuru)',
@@ -786,6 +787,7 @@ export const esES = {
   // Filtro runCostRecurring
   'engine.filter.runCostRecurring.label': 'Run-cost recurrente (con cascade)',
   'engine.filter.runCostRecurring.notEstimated': 'Run-cost recurrente no estimado (users nuevos, budget mensual). Pueden escalar licencias sin visibilidad{cascade}.',
+  'engine.filter.runCostRecurring.costPuUnknown': 'Costo/usuario de la org no informado — el proceso agrega usuarios pero el run-cost de licencia no es estimable. Releva el costo/usuario antes de decidir{cascade}.',
   'engine.filter.runCostRecurring.cascadeSuffix.warn': '; cascade estimado US${amount}/mes en {skus}',
   'engine.filter.runCostRecurring.cascadeSuffix.detail': ' (incluye cascade de add-ons +US${amount}/mes en {skus})',
   'engine.filter.runCostRecurring.exceeds': 'Coste mensual proyectado US${proj} excede el 150% del budget (US${budget}){cascade}.',

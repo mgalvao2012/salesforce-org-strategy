@@ -18,6 +18,10 @@ function compareVersion(a, b) {
 export function normalizeOrgMetadata(raw, filename) {
   const g = (path, def) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), raw) ?? def;
   const num = v => (typeof v === 'number' ? v : (typeof v === 'string' ? parseInt(v, 10) || 0 : 0));
+  // num-or-null: distingue "não medido" (null) de "zero real". Usado em campos de medição
+  // (capacidade, custo, SLA) onde 0 e ausência têm significados opostos — um 0 real é
+  // saudável/instantâneo, mas ausência não pode ser tratada como saudável.
+  const numN = v => (typeof v === 'number' ? v : (typeof v === 'string' && v.trim() !== '' && Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : null));
   const str = v => (typeof v === 'string' && v.trim() ? v.trim() : null);
   const arr = v => (Array.isArray(v) ? v : (typeof v === 'string' && v ? v.split(',').map(s => s.trim()).filter(Boolean) : []));
   const derivedDataModel = (() => {
@@ -53,9 +57,9 @@ export function normalizeOrgMetadata(raw, filename) {
     dataControllerLGPD: str(g('dataControllerLGPD')) || str(g('dataController')) || null,
     lobOwner: str(g('lobOwner')) || str(g('lob')) || null,
     releaseSchedule: str(g('releaseSchedule')) || 'unknown',
-    storagePct: num(g('storagePct') ?? g('limits.storagePct')),
-    apiUsagePct: num(g('apiUsagePct') ?? g('limits.apiUsagePct')),
-    customObjectLimitPct: num(g('customObjectLimitPct') ?? g('limits.customObjectPct')),
+    storagePct: numN(g('storagePct') ?? g('limits.storagePct')),
+    apiUsagePct: numN(g('apiUsagePct') ?? g('limits.apiUsagePct')),
+    customObjectLimitPct: numN(g('customObjectLimitPct') ?? g('limits.customObjectPct')),
     sharedCustomerBases: arr(g('sharedCustomerBases')),
     apexGuruCriticalIssues: num(g('apexGuruCriticalIssues') ?? g('apexGuru.criticalIssues')),
     apexGuruSoqlNonSelective: num(g('apexGuruSoqlNonSelective') ?? g('apexGuru.soqlNonSelective')),
@@ -89,8 +93,8 @@ export function normalizeOrgMetadata(raw, filename) {
     lastSandboxRefresh: str(g('lastSandboxRefresh') ?? g('sandboxes.lastRefresh')) || null,
     backupProvider: str(g('backupProvider') ?? g('backup.provider')) || null,
     backupFrequency: str(g('backupFrequency') ?? g('backup.frequency')) || null,
-    rtoHours: num(g('rtoHours') ?? g('backup.rtoHours')),
-    rpoHours: num(g('rpoHours') ?? g('backup.rpoHours')),
+    rtoHours: numN(g('rtoHours') ?? g('backup.rtoHours')),
+    rpoHours: numN(g('rpoHours') ?? g('backup.rpoHours')),
     concurrentApiLimit: num(g('concurrentApiLimit') ?? g('limits.concurrentApi')),
     concurrentApiUsagePct: num(g('concurrentApiUsagePct') ?? g('limits.concurrentApiPct')),
     streamingClientsPct: num(g('streamingClientsPct') ?? g('limits.streamingClientsPct')),
@@ -170,9 +174,9 @@ export function normalizeOrgMetadata(raw, filename) {
     // Growth trend (monthly delta for storage)
     storageGrowthPctPerMonth: (typeof g('storageGrowthPctPerMonth') === 'number' ? g('storageGrowthPctPerMonth') : (typeof g('growth.storagePctPerMonth') === 'number' ? g('growth.storagePctPerMonth') : 0)),
     // Cost per user baseline
-    costPerUserMonthly: num(g('costPerUserMonthly') ?? g('cost.perUserMonthly')),
+    costPerUserMonthly: numN(g('costPerUserMonthly') ?? g('cost.perUserMonthly')),
     // Cost of add-ons already on-org
-    addonRunCostMonthly: num(g('addonRunCostMonthly') ?? g('cost.addonMonthly')),
+    addonRunCostMonthly: numN(g('addonRunCostMonthly') ?? g('cost.addonMonthly')),
     _raw: raw
   };
 }
@@ -255,14 +259,27 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   filters.push({ key: 'features', label: t('engine.filter.features.label'), status: featStatus, reason: featReason });
 
   // Filtro 3: capacidade técnica atual
-  const objLimitPct = org.customObjectLimitPct || Math.round(org.customObjectCount / 30);
-  const storagePct = org.storagePct || 0;
-  const apiPct = org.apiUsagePct || 0;
-  const maxPct = Math.max(objLimitPct, storagePct, apiPct);
+  // customObjectLimitPct pode ser derivado do count (proxy) quando não medido diretamente.
+  const objLimitPct = org.customObjectLimitPct != null
+    ? org.customObjectLimitPct
+    : (org.customObjectCount > 0 ? Math.round(org.customObjectCount / 30) : null);
+  const storagePct = org.storagePct;
+  const apiPct = org.apiUsagePct;
+  const measured = [objLimitPct, storagePct, apiPct].filter(v => v != null);
   let capStatus, capReason;
-  if (maxPct >= 85) { capStatus = 'fail'; capReason = t('engine.filter.capacity.critical', { max: maxPct, obj: objLimitPct, storage: storagePct, api: apiPct }); }
-  else if (maxPct >= 70) { capStatus = 'warn'; capReason = t('engine.filter.capacity.tight', { max: maxPct }); }
-  else { capStatus = 'pass'; capReason = t('engine.filter.capacity.ok', { max: maxPct, obj: objLimitPct, storage: storagePct, api: apiPct }); }
+  if (measured.length === 0) {
+    // Nenhuma métrica de capacidade medida — não é "0% saudável", é desconhecido.
+    capStatus = 'warn';
+    capReason = t('engine.filter.capacity.notMeasured');
+  } else {
+    const maxPct = Math.max(...measured);
+    const dObj = objLimitPct == null ? '?' : objLimitPct;
+    const dSt = storagePct == null ? '?' : storagePct;
+    const dApi = apiPct == null ? '?' : apiPct;
+    if (maxPct >= 85) { capStatus = 'fail'; capReason = t('engine.filter.capacity.critical', { max: maxPct, obj: dObj, storage: dSt, api: dApi }); }
+    else if (maxPct >= 70) { capStatus = 'warn'; capReason = t('engine.filter.capacity.tight', { max: maxPct }); }
+    else { capStatus = 'pass'; capReason = t('engine.filter.capacity.ok', { max: maxPct, obj: dObj, storage: dSt, api: dApi }); }
+  }
   filters.push({ key: 'capacity', label: t('engine.filter.capacity.label'), status: capStatus, reason: capReason });
 
   // Filtro 3b: saúde operacional (ApexGuru)
@@ -348,8 +365,8 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   } else {
     const storageAdd = Math.round(procRecords / 1000000);
     const apiAddPct = Math.round((procApiDaily / 5000000) * 100);
-    const projStorage = (org.storagePct || 0) + storageAdd;
-    const projApi = (org.apiUsagePct || 0) + apiAddPct;
+    const projStorage = (org.storagePct ?? 0) + storageAdd;
+    const projApi = (org.apiUsagePct ?? 0) + apiAddPct;
     const maxProj = Math.max(projStorage, projApi);
     if (maxProj >= 90) {
       projStatus = 'fail';
@@ -510,8 +527,9 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
 
   // Filtro 12: Backup / DR
   const backupProv = org.backupProvider;
-  const rto = org.rtoHours || 0;
-  const rpo = org.rpoHours || 0;
+  const rto = org.rtoHours;   // null = SLA não medido (≠ 0h real)
+  const rpo = org.rpoHours;
+  const slaMeasured = rto != null && rpo != null;
   const requiredRto = numParse(proc.requiredRtoHours) || 24;
   const requiredRpo = numParse(proc.requiredRpoHours) || 24;
   let bkStatus, bkReason;
@@ -523,10 +541,10 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
       bkStatus = 'warn';
       bkReason = t('engine.filter.backupDR.noProvider');
     }
-  } else if (rto > requiredRto || rpo > requiredRpo) {
+  } else if (slaMeasured && (rto > requiredRto || rpo > requiredRpo)) {
     bkStatus = 'fail';
     bkReason = t('engine.filter.backupDR.slaMiss', { provider: backupProv, rto, rpo, reqRto: requiredRto, reqRpo: requiredRpo });
-  } else if (procCriticality === 'critical' && (rto === 0 || rpo === 0)) {
+  } else if (procCriticality === 'critical' && !slaMeasured) {
     bkStatus = 'warn';
     bkReason = t('engine.filter.backupDR.noSla', { provider: backupProv });
   } else if (procCriticality === 'critical' && org.backupFrequency && org.backupFrequency !== 'daily' && org.backupFrequency !== 'hourly') {
@@ -534,7 +552,7 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     bkReason = t('engine.filter.backupDR.lowFrequency', { provider: backupProv, freq: org.backupFrequency });
   } else {
     bkStatus = 'pass';
-    bkReason = t('engine.filter.backupDR.ok', { provider: backupProv, freq: org.backupFrequency || t('engine.filter.backupDR.freqNa'), rto, rpo });
+    bkReason = t('engine.filter.backupDR.ok', { provider: backupProv, freq: org.backupFrequency || t('engine.filter.backupDR.freqNa'), rto: rto ?? '?', rpo: rpo ?? '?' });
   }
   filters.push({ key: 'backupDR', label: t('engine.filter.backupDR.label'), status: bkStatus, reason: bkReason });
 
@@ -930,8 +948,8 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   // ============================================================
   const procUsersNew = numParse(proc.newUsers);
   const procMonthlyBudget = numParse(proc.monthlyBudgetUSD);
-  const costPU = org.costPerUserMonthly || 0;
-  const addonCost = org.addonRunCostMonthly || 0;
+  const costPU = org.costPerUserMonthly;      // null = baseline de custo/usuário não informado
+  const addonCost = org.addonRunCostMonthly ?? 0;
 
   // Cascade: ativar features requer SKUs adicionais e frequentemente puxa outras.
   // Estimativas conservadoras — USD/mês típico do mercado 2026 para uma org médio-porte.
@@ -972,14 +990,19 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   }
 
   let costStatus, costReason;
-  if (procUsersNew === 0 && procMonthlyBudget === 0) {
+  // Custo/usuário não informado, mas processo adiciona usuários → não dá para projetar
+  // custo de licença; tratar como não estimável (warn), não como $0/usuário.
+  const costPuUnknown = costPU == null && procUsersNew > 0;
+  if ((procUsersNew === 0 && procMonthlyBudget === 0) || costPuUnknown) {
     costStatus = 'warn';
     const cascadeSuffix = cascade.addedMonthly > 0
       ? t('engine.filter.runCostRecurring.cascadeSuffix.warn', { amount: cascade.addedMonthly.toLocaleString(), skus: cascade.chain.map(c=>c.sku).join(', ') })
       : '';
-    costReason = t('engine.filter.runCostRecurring.notEstimated', { cascade: cascadeSuffix });
+    costReason = costPuUnknown
+      ? t('engine.filter.runCostRecurring.costPuUnknown', { cascade: cascadeSuffix })
+      : t('engine.filter.runCostRecurring.notEstimated', { cascade: cascadeSuffix });
   } else {
-    const projMonthly = procUsersNew * costPU + addonCost + cascade.addedMonthly;
+    const projMonthly = procUsersNew * (costPU ?? 0) + addonCost + cascade.addedMonthly;
     const cascadeStr = cascade.addedMonthly > 0
       ? t('engine.filter.runCostRecurring.cascadeSuffix.detail', { amount: cascade.addedMonthly.toLocaleString(), skus: cascade.chain.map(c=>c.sku).join(', ') })
       : '';
@@ -1354,7 +1377,7 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
     grStatus = 'warn';
     grReason = t('engine.filter.growthTrend.notMeasured');
   } else {
-    const proj12mo = (org.storagePct || 0) + growth * 12;
+    const proj12mo = (org.storagePct ?? 0) + growth * 12;
     if (proj12mo >= 100) {
       grStatus = 'fail';
       grReason = t('engine.filter.growthTrend.overflow', { proj: Math.round(proj12mo), growth });
@@ -1486,11 +1509,15 @@ export function analyzeLandscape(evaluations, proc) {
       const sameRegulator = a.regulator && a.regulator === b.regulator;
       const sameController = a.dataControllerLGPD && a.dataControllerLGPD === b.dataControllerLGPD;
       const sameModel = a.dataModel && a.dataModel === b.dataModel;
-      const combinedStoragePct = (a.storagePct || 0) + (b.storagePct || 0);
-      const combinedApiPct = (a.apiUsagePct || 0) + (b.apiUsagePct || 0);
-      const combinedObjPct = (a.customObjectLimitPct || 0) + (b.customObjectLimitPct || 0);
+      // Só afirma que o par "cabe" se ambas têm capacidade medida — senão a soma de
+      // desconhecidos parece 0 e sugeriria consolidação sem evidência.
+      const capacityKnown = a.storagePct != null && b.storagePct != null &&
+                            a.apiUsagePct != null && b.apiUsagePct != null;
+      const combinedStoragePct = (a.storagePct ?? 0) + (b.storagePct ?? 0);
+      const combinedApiPct = (a.apiUsagePct ?? 0) + (b.apiUsagePct ?? 0);
+      const combinedObjPct = (a.customObjectLimitPct ?? 0) + (b.customObjectLimitPct ?? 0);
       const combinedFits = combinedStoragePct < 80 && combinedApiPct < 80 && combinedObjPct < 80;
-      if (sameRegulator && sameController && sameModel && combinedFits) {
+      if (sameRegulator && sameController && sameModel && capacityKnown && combinedFits) {
         consolidations.push({
           orgs: [a.orgName, b.orgName],
           rationale: t('engine.consolidation.rationale', { regulator: a.regulator, model: a.dataModel, storage: combinedStoragePct, api: combinedApiPct, objs: combinedObjPct }),
@@ -1502,8 +1529,10 @@ export function analyzeLandscape(evaluations, proc) {
 
   // 2. Load rebalancing — quotas críticas vs folgadas dentro do mesmo perímetro
   const rebalancing = [];
-  const heavyOrgs = orgs.filter(o => (o.platformEventUsagePct || 0) > 75 || (o.apiUsagePct || 0) > 75 || (o.storagePct || 0) > 75);
-  const lightOrgs = orgs.filter(o => (o.platformEventUsagePct || 0) < 30 && (o.apiUsagePct || 0) < 30 && (o.storagePct || 0) < 40);
+  const heavyOrgs = orgs.filter(o => (o.platformEventUsagePct || 0) > 75 || (o.apiUsagePct ?? 0) > 75 || (o.storagePct ?? 0) > 75);
+  // "Light" (alvo de carga) exige métricas medidas — uma org não medida não é comprovadamente folgada.
+  const lightOrgs = orgs.filter(o => o.apiUsagePct != null && o.storagePct != null &&
+    (o.platformEventUsagePct || 0) < 30 && o.apiUsagePct < 30 && o.storagePct < 40);
   for (const heavy of heavyOrgs) {
     const compatibleLight = lightOrgs.find(l =>
       l.regulator === heavy.regulator &&

@@ -282,6 +282,16 @@ scenarios.push({
   orgs: [goldOrg({ storagePct: 90 })], process: goldProc(), target: 'OrgGold',
   expect: { filterKey: 'capacity', status: 'fail' }
 });
+scenarios.push({
+  name: 'capacity WARN — nenhuma métrica medida (não é 0% saudável)',
+  orgs: [goldOrg({ storagePct: null, apiUsagePct: null, customObjectLimitPct: null, customObjectCount: 0 })], process: goldProc(), target: 'OrgGold',
+  expect: { filterKey: 'capacity', status: 'warn' }
+});
+scenarios.push({
+  name: 'capacity PASS — 0% real medido (distinto de ausente)',
+  orgs: [goldOrg({ storagePct: 0, apiUsagePct: 0, customObjectLimitPct: 0, customObjectCount: 0 })], process: goldProc(), target: 'OrgGold',
+  expect: { filterKey: 'capacity', status: 'pass' }
+});
 
 // ============================================================
 // FILTRO 6: health / ApexGuru (pass/warn/fail)
@@ -525,6 +535,12 @@ scenarios.push({
   process: goldProc({ criticality: 'high', requiredRtoHours: '4', requiredRpoHours: '1' }),
   target: 'OrgGold',
   expect: { filterKey: 'backupDR', status: 'fail' }
+});
+scenarios.push({
+  name: 'backupDR WARN — provider existe mas SLA não medido (critical), não pass silencioso',
+  orgs: [goldOrg({ backupProvider: 'OwnBackup', rtoHours: null, rpoHours: null })],
+  process: goldProc({ criticality: 'critical' }), target: 'OrgGold',
+  expect: { filterKey: 'backupDR', status: 'warn' }
 });
 
 // ============================================================
@@ -853,6 +869,12 @@ scenarios.push({
   orgs: [goldOrg({ costPerUserMonthly: 500, addonRunCostMonthly: 20000 })],
   process: goldProc({ newUsers: '100', monthlyBudgetUSD: '20000' }), target: 'OrgGold',
   expect: { filterKey: 'runCostRecurring', status: 'fail' }
+});
+scenarios.push({
+  name: 'runCostRecurring WARN — custo/usuário ausente + users novos (não projeta $0)',
+  orgs: [goldOrg({ costPerUserMonthly: null })],
+  process: goldProc({ newUsers: '50', monthlyBudgetUSD: '20000' }), target: 'OrgGold',
+  expect: { filterKey: 'runCostRecurring', status: 'warn' }
 });
 
 // ============================================================

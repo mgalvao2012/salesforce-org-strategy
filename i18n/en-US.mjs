@@ -586,6 +586,7 @@ export const enUS = {
   'engine.filter.capacity.critical': 'Critical capacity ({max}%): custom objects {obj}% - storage {storage}% - API {api}%.',
   'engine.filter.capacity.tight': 'Tight capacity ({max}%): resolve headroom first.',
   'engine.filter.capacity.ok': 'Comfortable headroom (max {max}%): custom objects {obj}% - storage {storage}% - API {api}%.',
+  'engine.filter.capacity.notMeasured': 'Capacity not measured (storage / API / custom objects missing). Without metrics, headroom cannot be asserted — collect limits before allocating.',
 
   // health filter (ApexGuru)
   'engine.filter.health.label': 'Operational health (ApexGuru)',
@@ -786,6 +787,7 @@ export const enUS = {
   // runCostRecurring filter
   'engine.filter.runCostRecurring.label': 'Recurring run-cost (with cascade)',
   'engine.filter.runCostRecurring.notEstimated': 'Recurring run-cost not estimated (new users, monthly budget). Licenses may scale without visibility{cascade}.',
+  'engine.filter.runCostRecurring.costPuUnknown': 'Org cost/user not provided — the process adds users but license run-cost cannot be estimated. Gather the cost/user before deciding{cascade}.',
   'engine.filter.runCostRecurring.cascadeSuffix.warn': '; estimated cascade US${amount}/month across {skus}',
   'engine.filter.runCostRecurring.cascadeSuffix.detail': ' (includes add-on cascade +US${amount}/month across {skus})',
   'engine.filter.runCostRecurring.exceeds': 'Projected monthly cost US${proj} exceeds 150% of the budget (US${budget}){cascade}.',
