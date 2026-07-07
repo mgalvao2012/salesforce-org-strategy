@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Extrai metadata de uma org Salesforce no formato consumido por
-# salesforce-org-strategy-questionnaire.html (motor allocation-engine.mjs).
+# index.html (motor allocation-engine.mjs).
 #
 # Uso:
 #   ./extract-org-metadata.sh <org-alias> [output.json]

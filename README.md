@@ -19,6 +19,7 @@ _This framework is based on Salesforce Well-Architected + Six-Factor (T. Leddy) 
 - [When to use](#when-to-use)
 - [Prerequisites](#prerequisites)
 - [Setup and run](#setup-and-run)
+- [Deploy to Heroku](#deploy-to-heroku)
 - [How to use](#how-to-use)
   - [Topology Mode](#topology-mode)
   - [Allocation Mode](#allocation-mode)
@@ -75,9 +76,25 @@ python3 -m http.server 8080
 npx serve -p 8080
 ```
 
-Open [http://localhost:8080/salesforce-org-strategy-questionnaire.html](http://localhost:8080/salesforce-org-strategy-questionnaire.html) in the browser.
+Open [http://localhost:8080/](http://localhost:8080/) in the browser (the app is served as `index.html`).
 
 The language is auto-detected from `navigator.language` (falls back to pt-BR) and persisted in `localStorage`. Use the PT / EN / ES switcher in the header to change at runtime.
+
+---
+
+## Deploy to Heroku
+
+The app is static (HTML + ES Modules), served by [`serve`](https://www.npmjs.com/package/serve) under the Heroku Node buildpack. `serve` binds to `$PORT` and returns `.mjs` as `text/javascript` (required — the browser refuses ES module imports otherwise).
+
+```bash
+heroku create <app-name>
+git push heroku master
+heroku open
+```
+
+- [package.json](package.json) — `start` script runs `serve . -l $PORT` (binds all interfaces); `serve` is a runtime `dependency` (not dev), so it survives Heroku's prune.
+- [Procfile](Procfile) — `web: npm start`.
+- The entry page is [index.html](index.html), served at `/`.
 
 ---
 
@@ -175,7 +192,9 @@ To add a new language:
 
 ```
 .
-├── salesforce-org-strategy-questionnaire.html   # Single UI — both modes
+├── index.html                                   # Single UI — both modes
+├── package.json                                 # Node metadata + start/test scripts (Heroku)
+├── Procfile                                     # Heroku web dyno entry (npm start → serve)
 ├── allocation-engine.mjs                        # Engine: ~45 filters, ranking, cascade
 ├── i18n.mjs                                     # i18n runtime (t, setLang, langchange)
 ├── i18n/

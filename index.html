@@ -871,8 +871,10 @@ function refreshBadges(q, wrap, storeKey) {
   badgeContainer.appendChild(badge);
 
   const plural = state.metadata.length > 1 ? '(s)' : '';
-  const html = t('evidence.orgData', { plural, evidence: inf.evidence });
-  evidenceEl.innerHTML = `${html}${inf.sources && inf.sources.length ? ` <span style="opacity:0.7;">(${inf.sources.join(' · ')})</span>` : ''}`;
+  // inf.evidence e inf.sources derivam de orgName/counts do JSON carregado — escapar antes
+  // de interpolar (t() faz replace cru de {placeholder}, sem sanitização).
+  const html = t('evidence.orgData', { plural, evidence: escapeHtml(inf.evidence) });
+  evidenceEl.innerHTML = `${html}${inf.sources && inf.sources.length ? ` <span style="opacity:0.7;">(${inf.sources.map(escapeHtml).join(' · ')})</span>` : ''}`;
   evidenceEl.style.display = 'block';
 }
 
@@ -1196,9 +1198,10 @@ function renderMetadataLoaded(orgs, errors) {
   const inferredCount = Object.keys(state.inferences).length;
   const manualCount = questions.filter(q => q.manualOnly).length;
   const parts = [];
-  parts.push(t('metadata.loaded.header', { count: orgs.length, names: orgs.map(o => o.orgName).join(', ') }));
+  // orgName vem do JSON e errors contém nomes de arquivo carregados — escapar antes de innerHTML.
+  parts.push(t('metadata.loaded.header', { count: orgs.length, names: orgs.map(o => escapeHtml(o.orgName)).join(', ') }));
   parts.push(`<ul><li>${t('metadata.loaded.autofilled', { count: inferredCount })}</li><li>${t('metadata.loaded.manual', { count: manualCount })}</li></ul>`);
-  if (errors.length) parts.push(`<div style="color:var(--multi);margin-top:8px;">${t('metadata.loaded.errors', { errors: errors.join('; ') })}</div>`);
+  if (errors.length) parts.push(`<div style="color:var(--multi);margin-top:8px;">${t('metadata.loaded.errors', { errors: errors.map(escapeHtml).join('; ') })}</div>`);
   el.innerHTML = parts.join('');
   el.classList.add('visible');
 }
@@ -1469,10 +1472,12 @@ function renderAllocationResult(evaluations, proc, landscape) {
       title = t('alloc.result.noViable.title');
       summary = landscape.summary;
   }
+  // title/summary são texto puro mas interpolam orgName do JSON — escapar. eyebrow e
+  // explainer.* são i18n estáticos (podem conter HTML intencional), ficam sem escape.
   hero.innerHTML = `
     <div class="result-eyebrow">${eyebrow}</div>
-    <div class="result-title">${title}</div>
-    <p class="result-summary">${summary}</p>
+    <div class="result-title">${escapeHtml(title)}</div>
+    <p class="result-summary">${escapeHtml(summary)}</p>
     <details class="score-explainer">
       <summary>${t('alloc.result.explainer.summary')}</summary>
       <div class="score-explainer-body">${t('alloc.result.explainer.body')}</div>

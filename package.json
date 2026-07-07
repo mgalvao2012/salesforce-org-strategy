@@ -1,0 +1,17 @@
+{
+  "name": "salesforce-org-strategy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive decision-support tool for Salesforce multi-org topology and process allocation.",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "start": "serve . -l ${PORT:-8080} --no-clipboard",
+    "test": "node tests/allocation-tests.mjs && node tests/advanced-tests.mjs && node tests/coverage-check.mjs && node tests/effectiveness-check.mjs && node tests/samples-coverage.mjs"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}

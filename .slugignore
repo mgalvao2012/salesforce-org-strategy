@@ -1,0 +1,14 @@
+# Removido do slug Heroku APÓS o build (npm install já rodou → serve continua instalado).
+# Mantém no dyno apenas o essencial de runtime:
+#   index.html, allocation-engine.mjs, i18n.mjs, i18n/*.mjs, package.json, Procfile
+# Tudo abaixo é dev/documentação e não é buscado pelo app em runtime.
+
+.DS_Store
+.vscode
+README.md
+CLAUDE.md
+extract-org-metadata.sh
+org-metadata.manual.template.json
+sample-org-metadata.json
+samples
+tests

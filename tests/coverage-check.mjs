@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { normalizeOrgMetadata, evaluateOrgForProcess } from '../allocation-engine.mjs';
 
 const engineSrc = readFileSync(new URL('../allocation-engine.mjs', import.meta.url), 'utf8');
-const htmlSrc = readFileSync(new URL('../salesforce-org-strategy-questionnaire.html', import.meta.url), 'utf8');
+const htmlSrc = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 // Extrai campos do normalize: pega o retorno grande do objeto — usa a assinatura "field: ".
 // Colhe apenas fields declarados no bloco "return { ... _raw: raw };".
