@@ -186,7 +186,10 @@ export function evaluateOrgForProcess(org, proc, knownOrgNames = []) {
   const orgRegulator = org.regulator || 'unknown';
   const procRegulator = proc.regulator;
   let regStatus = 'pass', regReason = '';
-  if (procRegulator === 'NONE') {
+  // Regulador ausente ('', undefined) é tratado como não-regulado, igual a 'NONE'.
+  // Sem isso, um processo sem regulador falharia contra qualquer org que declare um,
+  // divergindo de analyzeLandscape (que pula o critério de nova org quando falsy).
+  if (!procRegulator || procRegulator === 'NONE') {
     regStatus = 'pass';
     regReason = t('engine.filter.regulator.notRegulated');
   } else if (orgRegulator === 'unknown') {

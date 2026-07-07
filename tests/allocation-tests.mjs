@@ -196,6 +196,16 @@ scenarios.push({
   orgs: [goldOrg({ regulator: 'CVM' })], process: goldProc({ regulator: 'BACEN' }), target: 'OrgGold',
   expect: { filterKey: 'regulator', status: 'fail' }
 });
+scenarios.push({
+  name: 'regulator PASS — processo sem regulador (NONE)',
+  orgs: [goldOrg({ regulator: 'BACEN' })], process: goldProc({ regulator: 'NONE' }), target: 'OrgGold',
+  expect: { filterKey: 'regulator', status: 'pass' }
+});
+scenarios.push({
+  name: 'regulator PASS — processo sem regulador (vazio) não falha contra org regulada',
+  orgs: [goldOrg({ regulator: 'BACEN' })], process: goldProc({ regulator: '' }), target: 'OrgGold',
+  expect: { filterKey: 'regulator', status: 'pass' }
+});
 
 // ============================================================
 // FILTRO 2: dataController (pass/warn/fail)
